@@ -1,0 +1,66 @@
+# Model + provider registry for the knowledge-cutoff benchmark.
+#
+# A "provider" describes how to reach an API. Two kinds are supported:
+#   - anthropic : the native Anthropic SDK (Messages API)
+#   - openai    : any OpenAI-compatible /chat/completions endpoint (most vendors)
+#
+# A "model" binds a short local key (what you pass to `kc run --model`) to a
+# provider + the vendor's model id.
+#
+# api_key_env names the environment variable holding the key; nothing is stored here.
+
+providers:
+  anthropic:
+    kind: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+  openai:
+    kind: openai
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+  xai:
+    kind: openai
+    base_url: https://api.x.ai/v1
+    api_key_env: XAI_API_KEY
+  google:
+    kind: openai
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key_env: GOOGLE_API_KEY
+  groq:
+    kind: openai
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+  together:
+    kind: openai
+    base_url: https://api.together.xyz/v1
+    api_key_env: TOGETHER_API_KEY
+  fireworks:
+    kind: openai
+    base_url: https://api.fireworks.ai/inference/v1
+    api_key_env: FIREWORKS_API_KEY
+  mistral:
+    kind: openai
+    base_url: https://api.mistral.ai/v1
+    api_key_env: MISTRAL_API_KEY
+  openrouter:
+    kind: openai
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+
+# key: what you type after --model.  provider: which provider block above.
+# model_id: the vendor's exact model identifier.
+models:
+  # --- Anthropic ---
+  claude-opus-4-8:      { provider: anthropic, model_id: claude-opus-4-8 }
+  claude-sonnet-5:      { provider: anthropic, model_id: claude-sonnet-5 }
+  claude-haiku-4-5:     { provider: anthropic, model_id: claude-haiku-4-5-20251001 }
+  claude-fable-5:       { provider: anthropic, model_id: claude-fable-5 }
+  # --- OpenAI ---
+  gpt-5:                { provider: openai, model_id: gpt-5 }
+  gpt-4o:               { provider: openai, model_id: gpt-4o }
+  # --- xAI ---
+  grok-4:               { provider: xai, model_id: grok-4 }
+  # --- Google ---
+  gemini-2.5-pro:       { provider: google, model_id: gemini-2.5-pro }
+  # --- open-weights via Together / Fireworks (examples; edit model_id as needed) ---
+  llama-3.3-70b:        { provider: together, model_id: "meta-llama/Llama-3.3-70B-Instruct-Turbo" }
+  deepseek-v3:          { provider: fireworks, model_id: "accounts/fireworks/models/deepseek-v3" }

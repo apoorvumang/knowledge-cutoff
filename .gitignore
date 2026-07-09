@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+runs/
+graded/
+*.egg-info/
+data/raw_batches/
+report.html
+*.egg-info/

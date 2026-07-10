@@ -54,8 +54,8 @@
   .lb tr:last-child td{border-bottom:0;}
   .lb .mname{display:inline-flex;align-items:center;gap:9px;font-weight:600;}
   .chip-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none;}
-  .pbadge{width:16px;height:16px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#fff;font-family:var(--mono);font-size:9.5px;font-weight:700;line-height:1;box-shadow:inset 0 0 0 1px rgba(128,128,128,.3);}
-  .pbadge svg{width:11px;height:11px;display:block;}
+  .pbadge{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex:none;background:#fff;box-shadow:inset 0 0 0 1px rgba(128,128,128,.28);padding:2.5px;}
+  .plogo{width:100%;height:100%;object-fit:contain;display:block;}
   .lb .eff{font-family:var(--mono);font-weight:600;color:var(--accent);}
   .lb .gapneg{color:var(--bad);font-family:var(--mono);font-size:12px;}
   .lb .ctl{font-family:var(--mono);font-size:12px;color:var(--muted);}
@@ -128,7 +128,7 @@
 <div class="wrap">
   <p class="eyebrow">Knowledge-Cutoff Benchmark · Explorer</p>
   <h1>What do frontier models actually know — and when did they stop knowing it?</h1>
-  <p class="lede">Each model was probed on 198 surprising, unforecastable events across 18 months. Below: where each model's knowledge collapses (its <b>effective cutoff</b>), a month-by-month heatmap, and — for every single event — <b>the exact answer each model gave</b>. Pick an event and read them yourself.</p>
+  <p class="lede"><b>12 models</b> were each probed on <b>330 surprising, unforecastable events</b> spanning 30 months (Jan 2024 – Jun 2026). Below: a month-by-month heatmap with each model's <b>claimed</b> cutoff ringed, a leaderboard of where knowledge actually collapses (its <b>effective cutoff</b>), and — for every single event — <b>the exact answer each model gave</b>. Pick an event and read them yourself.</p>
 
   <div class="section">
     <div class="section-label"><span>Heatmap · correctness by month</span>
@@ -176,7 +176,7 @@
   <footer>
     direct = open question graded correct / wrong / abstain by an LLM judge holding the ground truth · mcq = 4-way forced choice (chance ≈ 25%)<br>
     effective cutoff = last month above 50% correct that stays gone afterward · controls: living people (should be "alive") + fabricated events (should be denied)<br>
-    198 events · Jan 2025 – Jun 2026 · surprising / unforecastable only · balanced US / international
+    330 events · 12 models · Jan 2024 – Jun 2026 · surprising / unforecastable only · balanced US / international
   </footer>
 </div>
 
@@ -190,14 +190,12 @@ const MC = {  // per-model series colors (work on both themes)
   "gpt-5.5":"#C026D3","gpt-5.4":"#4F46E5"};
 const mcol = m => MC[m] || "#8A94A6";
 
-// Provider identity: brand-coloured badge next to every model name.
+// Provider identity: real brand logos (embedded as base64 data: URIs at build
+// time, one <img> each so vendor SVGs stay fully isolated).
+const LOGOS = __LOGOS__;
 const PROV = {
-  anthropic:{name:"Anthropic",bg:"#C9662E",mark:"burst"},
-  openai:{name:"OpenAI",bg:"#0D0D0D",mark:"rosette"},
-  google:{name:"Google",bg:"#1A73E8",mark:"spark"},
-  xai:{name:"xAI",bg:"#111111",mark:"x"},
-  deepseek:{name:"DeepSeek",bg:"#4D6BFE",mark:"D"},
-  zhipu:{name:"Zhipu · Z.ai",bg:"#5B4BEA",mark:"Z"},
+  anthropic:{name:"Anthropic"}, openai:{name:"OpenAI"}, google:{name:"Google Gemini"},
+  xai:{name:"xAI"}, deepseek:{name:"DeepSeek"}, zhipu:{name:"Zhipu · Z.ai (GLM)"},
 };
 const MODEL_PROV = {
   "claude-fable-5":"anthropic","claude-opus-4-8":"anthropic","claude-sonnet-5":"anthropic",
@@ -206,16 +204,10 @@ const MODEL_PROV = {
   "glm-5.2":"zhipu","deepseek-v4-pro":"deepseek",
 };
 function makeBadge(pk){
-  const p=PROV[pk]||{name:pk,bg:"#888",mark:"?"};
-  let inner;
-  switch(p.mark){
-    case "burst":   inner=`<svg viewBox="0 0 16 16" style="stroke:#fff;stroke-width:1.6;stroke-linecap:round;fill:none"><path d="M8 2V14M2 8H14M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"/></svg>`; break;
-    case "rosette": inner=`<svg viewBox="0 0 16 16" style="stroke:#fff;stroke-width:1.25;fill:none"><g transform="translate(8 8)"><ellipse rx="2.3" ry="5.3"/><ellipse rx="2.3" ry="5.3" transform="rotate(60)"/><ellipse rx="2.3" ry="5.3" transform="rotate(120)"/></g></svg>`; break;
-    case "spark":   inner=`<svg viewBox="0 0 16 16" style="fill:#fff"><path d="M8 1 9.5 6.5 15 8 9.5 9.5 8 15 6.5 9.5 1 8 6.5 6.5Z"/></svg>`; break;
-    case "x":       inner=`<svg viewBox="0 0 16 16" style="stroke:#fff;stroke-width:2;stroke-linecap:round"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>`; break;
-    default:        inner=p.mark;
-  }
-  return `<span class="pbadge" title="${p.name}" style="background:${p.bg}">${inner}</span>`;
+  const p=PROV[pk]||{name:pk}; const src=LOGOS[pk];
+  return src
+    ? `<span class="pbadge" title="${p.name}"><img class="plogo" src="${src}" alt="${p.name}"></span>`
+    : `<span class="pbadge" title="${p.name}"></span>`;
 }
 const badge = m => makeBadge(MODEL_PROV[m]||"");
 // index (in months[]) of a model's advertised cutoff, or -1 if none/out of range

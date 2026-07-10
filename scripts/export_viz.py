@@ -43,6 +43,8 @@ LCODE = {"correct": "c", "incorrect": "w", "abstain": "a"}
 MODEL_META = [
     ("claude-fable-5", "Claude Fable 5", "Jan 2026"),
     ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
+    ("gpt-5.5", "GPT-5.5", "Dec 2025"),
+    ("gpt-5.4", "GPT-5.4", "Aug 2025"),
     ("grok-4.5", "Grok 4.5", "not published"),
     ("gemini-3.5-flash", "Gemini 3.5 Flash", "Jan 2025"),
     ("gemini-3.1-pro", "Gemini 3.1 Pro", "Jan 2025"),

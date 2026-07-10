@@ -54,6 +54,8 @@
   .lb tr:last-child td{border-bottom:0;}
   .lb .mname{display:inline-flex;align-items:center;gap:9px;font-weight:600;}
   .chip-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none;}
+  .pbadge{width:16px;height:16px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#fff;font-family:var(--mono);font-size:9.5px;font-weight:700;line-height:1;box-shadow:inset 0 0 0 1px rgba(128,128,128,.3);}
+  .pbadge svg{width:11px;height:11px;display:block;}
   .lb .eff{font-family:var(--mono);font-weight:600;color:var(--accent);}
   .lb .gapneg{color:var(--bad);font-family:var(--mono);font-size:12px;}
   .lb .ctl{font-family:var(--mono);font-size:12px;color:var(--muted);}
@@ -79,6 +81,9 @@
   .heat th.row{text-align:right;color:var(--ink);font-family:var(--sans);font-size:12px;font-weight:600;}
   .heat td{width:26px;height:26px;border-radius:4px;cursor:pointer;position:relative;}
   .heat td:hover{outline:2px solid var(--ink);outline-offset:-1px;}
+  .heat td.claimed{box-shadow:inset 0 0 0 2.5px var(--accent), inset 0 0 0 3.5px rgba(0,0,0,.22);z-index:1;}
+  .heat th.row .rl{display:inline-flex;align-items:center;gap:7px;justify-content:flex-end;}
+  .claimed-key{display:inline-block;width:15px;height:15px;border-radius:3px;background:var(--panel-3);box-shadow:inset 0 0 0 2.5px var(--accent);vertical-align:-3px;}
   .heat .hcap{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;align-items:center;gap:8px;margin-top:10px;}
   .heat .scale{display:inline-flex;height:10px;width:120px;border-radius:3px;background:linear-gradient(90deg,var(--bad),#E7C14B,var(--good));}
 
@@ -126,8 +131,17 @@
   <p class="lede">Each model was probed on 198 surprising, unforecastable events across 18 months. Below: where each model's knowledge collapses (its <b>effective cutoff</b>), a month-by-month heatmap, and — for every single event — <b>the exact answer each model gave</b>. Pick an event and read them yourself.</p>
 
   <div class="section">
-    <div class="section-label"><span>Leaderboard · effective knowledge horizon</span>
+    <div class="section-label"><span>Heatmap · correctness by month</span>
+      <span class="hint">amber ring = the model's <em>claimed</em> cutoff · click any cell to read those answers</span>
       <span class="probe-toggle"></span></div>
+    <div class="heat">
+      <div id="heat-slot"></div>
+      <div class="hcap">doesn't know <span class="scale"></span> knows &nbsp;·&nbsp; shade = % correct that month &nbsp;·&nbsp; <span class="claimed-key"></span> claimed cutoff (where the model says its knowledge ends)</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><span>Leaderboard · effective knowledge horizon</span></div>
     <table class="lb"><thead><tr>
       <th>Model</th><th>Advertised</th><th>Effective cutoff</th><th>vs advertised</th>
       <th>Alive ctl</th><th>Fake ctl</th>
@@ -141,15 +155,6 @@
       <div class="legend" id="legend"></div>
       <div id="chart-slot"></div>
       <div class="tip" id="tip"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-label"><span>Heatmap · correctness by month</span>
-      <span class="hint">click any cell to inspect those answers below</span></div>
-    <div class="heat">
-      <div id="heat-slot"></div>
-      <div class="hcap">doesn't know <span class="scale"></span> knows &nbsp;·&nbsp; shade = % correct that month</div>
     </div>
   </div>
 
@@ -181,8 +186,41 @@ const DATA = JSON.parse(document.getElementById("data").textContent);
 const MC = {  // per-model series colors (work on both themes)
   "claude-fable-5":"#12897A","gpt-5.6-sol":"#7A5AF0","grok-4.5":"#2E7DD6",
   "gemini-3.5-flash":"#C64B8C","gemini-3.1-pro":"#8E3BB0","claude-opus-4-8":"#E07B39",
-  "claude-sonnet-5":"#5FA83D","gpt-4o":"#8A94A6","glm-5.2":"#D1495B","deepseek-v4-pro":"#2C6E63"};
+  "claude-sonnet-5":"#5FA83D","gpt-4o":"#8A94A6","glm-5.2":"#D1495B","deepseek-v4-pro":"#2C6E63",
+  "gpt-5.5":"#C026D3","gpt-5.4":"#4F46E5"};
 const mcol = m => MC[m] || "#8A94A6";
+
+// Provider identity: brand-coloured badge next to every model name.
+const PROV = {
+  anthropic:{name:"Anthropic",bg:"#C9662E",mark:"burst"},
+  openai:{name:"OpenAI",bg:"#0D0D0D",mark:"rosette"},
+  google:{name:"Google",bg:"#1A73E8",mark:"spark"},
+  xai:{name:"xAI",bg:"#111111",mark:"x"},
+  deepseek:{name:"DeepSeek",bg:"#4D6BFE",mark:"D"},
+  zhipu:{name:"Zhipu · Z.ai",bg:"#5B4BEA",mark:"Z"},
+};
+const MODEL_PROV = {
+  "claude-fable-5":"anthropic","claude-opus-4-8":"anthropic","claude-sonnet-5":"anthropic",
+  "gpt-5.6-sol":"openai","gpt-5.5":"openai","gpt-5.4":"openai","gpt-4o":"openai",
+  "grok-4.5":"xai","gemini-3.5-flash":"google","gemini-3.1-pro":"google",
+  "glm-5.2":"zhipu","deepseek-v4-pro":"deepseek",
+};
+function makeBadge(pk){
+  const p=PROV[pk]||{name:pk,bg:"#888",mark:"?"};
+  let inner;
+  switch(p.mark){
+    case "burst":   inner=`<svg viewBox="0 0 16 16" style="stroke:#fff;stroke-width:1.6;stroke-linecap:round;fill:none"><path d="M8 2V14M2 8H14M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4"/></svg>`; break;
+    case "rosette": inner=`<svg viewBox="0 0 16 16" style="stroke:#fff;stroke-width:1.25;fill:none"><g transform="translate(8 8)"><ellipse rx="2.3" ry="5.3"/><ellipse rx="2.3" ry="5.3" transform="rotate(60)"/><ellipse rx="2.3" ry="5.3" transform="rotate(120)"/></g></svg>`; break;
+    case "spark":   inner=`<svg viewBox="0 0 16 16" style="fill:#fff"><path d="M8 1 9.5 6.5 15 8 9.5 9.5 8 15 6.5 9.5 1 8 6.5 6.5Z"/></svg>`; break;
+    case "x":       inner=`<svg viewBox="0 0 16 16" style="stroke:#fff;stroke-width:2;stroke-linecap:round"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>`; break;
+    default:        inner=p.mark;
+  }
+  return `<span class="pbadge" title="${p.name}" style="background:${p.bg}">${inner}</span>`;
+}
+const badge = m => makeBadge(MODEL_PROV[m]||"");
+// index (in months[]) of a model's advertised cutoff, or -1 if none/out of range
+function advIndex(m){ const A=parseAdv(DATA.labels[m].advertised); if(!A) return -1;
+  return months.indexOf(String(A.y)+"-"+String(A.m).padStart(2,"0")); }
 const months = DATA.months, N = months.length;
 const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const fmtMonth = m => { const [y,mo]=m.split("-"); return MO[+mo-1]+" '"+y.slice(2); };
@@ -249,7 +287,7 @@ function renderLeaderboard(){
     const fakeBad = d&&d.controls&&d.controls.fake_confirmed>0;
     const tr=document.createElement("tr");
     tr.innerHTML=`
-      <td><span class="mname"><i class="chip-dot" style="background:${mcol(m)}"></i>${lab.name}</span></td>
+      <td><span class="mname">${badge(m)}${lab.name}</span></td>
       <td class="ctl">${adv}</td>
       <td class="eff">${displayEff(eff)}</td>
       <td>${gapCell(adv, eff)}</td>
@@ -307,7 +345,7 @@ function renderChart(){
   const lg=document.getElementById("legend"); lg.innerHTML="";
   DATA.models.forEach(m=>{
     const b=document.createElement("button"); b.className=state.hidden.has(m)?"off":"";
-    b.innerHTML=`<i class="ln" style="border-color:${mcol(m)}"></i>${DATA.labels[m].name}`;
+    b.innerHTML=`<i class="ln" style="border-color:${mcol(m)}"></i>${badge(m)}${DATA.labels[m].name}`;
     b.onclick=()=>{ state.hidden.has(m)?state.hidden.delete(m):state.hidden.add(m); renderChart(); };
     lg.appendChild(b);
   });
@@ -325,12 +363,16 @@ function renderHeatmap(){
   let head="<tr><th></th>"+months.map(m=>`<th class="col">${fmtMonth(m)}</th>`).join("")+"</tr>";
   let body=DATA.models.map(m=>{
     const s=DATA.summary[m]&&DATA.summary[m][state.probe];
+    const ci=advIndex(m);
     const cells=months.map((mo,i)=>{
       const k=s?s.curve[i].k:0, n=s?s.curve[i].n:0;
-      return `<td title="${DATA.labels[m].name} · ${fmtMonth(mo)} · ${Math.round(k*100)}% (n=${n})"
+      const claimed=(i===ci);
+      const t=`${DATA.labels[m].name} · ${fmtMonth(mo)} · ${Math.round(k*100)}% (n=${n})`
+        + (claimed?` · CLAIMED cutoff (${DATA.labels[m].advertised})`:"");
+      return `<td class="${claimed?'claimed':''}" title="${t}"
         style="background:${heatColor(k)}" data-m="${m}" data-mo="${mo}"></td>`;
     }).join("");
-    return `<tr><th class="row">${DATA.labels[m].name}</th>${cells}</tr>`;
+    return `<tr><th class="row"><span class="rl">${badge(m)}${DATA.labels[m].name}</span></th>${cells}</tr>`;
   }).join("");
   tbl.innerHTML=head+body;
   tbl.querySelectorAll("td").forEach(td=>td.onclick=()=>{
@@ -397,7 +439,7 @@ function renderDetail(){
     const l=a?a.l:"a"; const vlabel={c:"correct",w:"wrong",a:"abstain"}[l];
     let r = a&&a.r ? a.r : (a? "(no answer recorded)":"(not evaluated)");
     return `<div class="arow">
-      <div class="who"><i class="chip-dot" style="background:${mcol(m)}"></i>${DATA.labels[m].name}
+      <div class="who">${badge(m)}${DATA.labels[m].name}
         <span class="verdict ${l}">${vlabel}</span></div>
       <div class="resp ${a&&a.r?'':'empty'}">${escapeHtml(r)}</div></div>`;
   }).join("");

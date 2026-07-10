@@ -56,6 +56,8 @@ models:
   claude-fable-5:       { provider: anthropic, model_id: claude-fable-5 }
   # --- OpenAI ---
   gpt-5.6-sol:          { provider: openai, model_id: gpt-5.6-sol }
+  gpt-5.5:              { provider: openai, model_id: gpt-5.5 }
+  gpt-5.4:              { provider: openai, model_id: gpt-5.4 }
   gpt-5:                { provider: openai, model_id: gpt-5 }
   gpt-4o:               { provider: openai, model_id: gpt-4o }
   # --- xAI ---

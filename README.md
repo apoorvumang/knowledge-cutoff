@@ -1,5 +1,11 @@
 # knowledge-cutoff
 
+[![Live explorer](https://img.shields.io/badge/live-explorer-1f6feb)](https://apoorvumang.github.io/knowledge-cutoff/)
+[![Dataset on HF](https://img.shields.io/badge/%F0%9F%A4%97%20dataset-HuggingFace-ffcc00)](https://huggingface.co/datasets/apoorvumang/knowledge-cutoff-benchmark)
+[![License: CC BY 4.0](https://img.shields.io/badge/license-CC%20BY%204.0-green)](https://creativecommons.org/licenses/by/4.0/)
+
+**Interactive results → https://apoorvumang.github.io/knowledge-cutoff/ · Dataset → https://huggingface.co/datasets/apoorvumang/knowledge-cutoff-benchmark**
+
 A benchmark to estimate the **effective knowledge cutoff** of a language model —
 what it *actually* knows about the world, which is often earlier than the cutoff
 date it advertises.

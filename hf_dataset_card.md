@@ -92,8 +92,8 @@ individual answer.
 ```python
 from datasets import load_dataset
 
-events  = load_dataset("<your-username>/knowledge-cutoff-benchmark", "events",  split="train")
-results = load_dataset("<your-username>/knowledge-cutoff-benchmark", "results", split="train")
+events  = load_dataset("apoorvumang/knowledge-cutoff-benchmark", "events",  split="train")
+results = load_dataset("apoorvumang/knowledge-cutoff-benchmark", "results", split="train")
 ```
 
 ## License

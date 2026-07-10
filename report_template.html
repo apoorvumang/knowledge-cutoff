@@ -35,6 +35,10 @@
   h1{font-size:clamp(26px,4.4vw,42px);line-height:1.06;letter-spacing:-.02em;font-weight:680;margin:0 0 16px;text-wrap:balance;max-width:22ch;}
   .lede{font-size:clamp(15px,1.8vw,18px);color:var(--muted);margin:0;max-width:66ch;}
   .lede b{color:var(--ink);font-weight:600;}
+  .toplinks{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
+  .toplinks a{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12.5px;color:var(--ink);text-decoration:none;border:1px solid var(--hair-strong);border-radius:8px;padding:7px 12px;background:var(--panel);transition:border-color .12s;}
+  .toplinks a:hover{border-color:var(--accent);}
+  .toplinks a .ic{font-size:14px;line-height:1;}
 
   .section{margin-top:52px;}
   .section-label{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 14px;padding-bottom:9px;border-bottom:1px solid var(--hair);display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
@@ -127,8 +131,13 @@
 
 <div class="wrap">
   <p class="eyebrow">Knowledge-Cutoff Benchmark · Explorer</p>
-  <h1>What do frontier models actually know — and when did they stop knowing it?</h1>
+  <h1>How up-to-date is each AI model?</h1>
   <p class="lede"><b>12 models</b> were each probed on <b>330 surprising, unforecastable events</b> spanning 30 months (Jan 2024 – Jun 2026). Below: a month-by-month heatmap with each model's <b>claimed</b> cutoff ringed, a leaderboard of where knowledge actually collapses (its <b>effective cutoff</b>), and — for every single event — <b>the exact answer each model gave</b>. Pick an event and read them yourself.</p>
+
+  <div class="toplinks">
+    <a href="https://github.com/apoorvumang/knowledge-cutoff"><span class="ic">↗</span>Code on GitHub</a>
+    <a href="https://huggingface.co/datasets/apoorvumang/knowledge-cutoff-benchmark"><span class="ic">🤗</span>Dataset on HuggingFace</a>
+  </div>
 
   <div class="section">
     <div class="section-label"><span>Heatmap · correctness by month</span>

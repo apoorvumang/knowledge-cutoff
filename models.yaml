@@ -65,6 +65,8 @@ models:
   gemini-3.5-flash:     { provider: google, model_id: gemini-3.5-flash }
   gemini-3.1-pro:       { provider: google, model_id: gemini-3.1-pro-preview }
   gemini-2.5-pro:       { provider: google, model_id: gemini-2.5-pro }
-  # --- open-weights via Together / Fireworks (examples; edit model_id as needed) ---
+  # --- open-weights / Chinese frontier via OpenRouter ---
+  glm-5.2:              { provider: openrouter, model_id: "z-ai/glm-5.2" }
+  deepseek-v4-pro:      { provider: openrouter, model_id: "deepseek/deepseek-v4-pro" }
   llama-3.3-70b:        { provider: together, model_id: "meta-llama/Llama-3.3-70B-Instruct-Turbo" }
   deepseek-v3:          { provider: fireworks, model_id: "accounts/fireworks/models/deepseek-v3" }

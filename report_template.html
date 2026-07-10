@@ -180,8 +180,8 @@
 const DATA = JSON.parse(document.getElementById("data").textContent);
 const MC = {  // per-model series colors (work on both themes)
   "claude-fable-5":"#12897A","gpt-5.6-sol":"#7A5AF0","grok-4.5":"#2E7DD6",
-  "gemini-3.5-flash":"#C64B8C","claude-opus-4-8":"#E07B39","claude-sonnet-5":"#5FA83D",
-  "gpt-4o":"#8A94A6"};
+  "gemini-3.5-flash":"#C64B8C","gemini-3.1-pro":"#8E3BB0","claude-opus-4-8":"#E07B39",
+  "claude-sonnet-5":"#5FA83D","gpt-4o":"#8A94A6"};
 const mcol = m => MC[m] || "#8A94A6";
 const months = DATA.months, N = months.length;
 const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -208,6 +208,11 @@ function setProbe(p){
 
 /* ---------- leaderboard ---------- */
 const monthIndex = m => m ? months.indexOf(m.replace("+","")) : -1;
+function displayEff(eff){ // human label for an effective cutoff, incl. out-of-window
+  if(!eff) return "before "+fmtMonth(months[0]);
+  if(eff.endsWith("+")) return "after "+fmtMonth(months[months.length-1]);
+  return fmtMonth(eff);
+}
 function parseAdv(adv){ // "Mon YYYY" -> {y,m}, else null
   const m=/^([A-Za-z]{3})\s+(\d{4})$/.exec((adv||"").trim());
   if(!m) return null; const mi=MO.indexOf(m[1]); if(mi<0) return null;
@@ -235,7 +240,7 @@ function renderLeaderboard(){
     tr.innerHTML=`
       <td><span class="mname"><i class="chip-dot" style="background:${mcol(m)}"></i>${lab.name}</span></td>
       <td class="ctl">${adv}</td>
-      <td class="eff">${eff?fmtMonth(eff):"—"}</td>
+      <td class="eff">${displayEff(eff)}</td>
       <td>${gap!=null?`<span class="${gap>0?'gapneg':''}">${gap>0?'−'+gap+' mo':(gap===0?'match':'+'+(-gap)+' mo')}</span>`:'<span class="ctl">—</span>'}</td>
       <td class="ctl ${aliveMiss?'warn':''}">${ctl(d,"alive")}</td>
       <td class="ctl ${fakeBad?'warn':''}">${ctl(d,"fake")}</td>`;

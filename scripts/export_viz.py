@@ -37,13 +37,14 @@ LCODE = {"correct": "c", "incorrect": "w", "abstain": "a"}
 #   Claude Opus 4.8 / Sonnet 5 / Fable 5 -> Jan 2026 (Claude Platform docs)
 #   GPT-5.6 (sol) -> Feb 2026 (OpenAI model page)
 #   GPT-4o -> Oct 2023 (OpenAI model page)
-#   Gemini 3.5 Flash -> Jan 2025 (Gemini API docs)
-#   Grok 4.5 -> no official cutoff published by xAI
+#   Gemini 3.5 Flash / 3.1 Pro -> Jan 2025 (Gemini API docs + DeepMind model card)
+#   Grok 4.5 -> no official cutoff published by xAI (the "Dec 2025" figure is Grok 4.3)
 MODEL_META = [
     ("claude-fable-5", "Claude Fable 5", "Jan 2026"),
     ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
     ("grok-4.5", "Grok 4.5", "not published"),
     ("gemini-3.5-flash", "Gemini 3.5 Flash", "Jan 2025"),
+    ("gemini-3.1-pro", "Gemini 3.1 Pro", "Jan 2025"),
     ("claude-opus-4-8", "Claude Opus 4.8", "Jan 2026"),
     ("claude-sonnet-5", "Claude Sonnet 5", "Jan 2026"),
     ("gpt-4o", "GPT-4o", "Oct 2023"),

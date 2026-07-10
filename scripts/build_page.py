@@ -17,11 +17,13 @@ data = data.replace("<", "\\u003c")
 
 # Real provider logos (assets/logos/<provider>.svg) -> base64 data: URIs, so each
 # vendor SVG is fully isolated (no cross-logo CSS class / gradient-id collisions).
+MIME = {".svg": "image/svg+xml", ".png": "image/png"}
 logos = {}
-for path in sorted(glob.glob(os.path.join(HERE, "assets", "logos", "*.svg"))):
-    key = os.path.splitext(os.path.basename(path))[0]
+for path in sorted(glob.glob(os.path.join(HERE, "assets", "logos", "*.svg")) +
+                   glob.glob(os.path.join(HERE, "assets", "logos", "*.png"))):
+    key, ext = os.path.splitext(os.path.basename(path))
     b64 = base64.b64encode(open(path, "rb").read()).decode("ascii")
-    logos[key] = "data:image/svg+xml;base64," + b64
+    logos[key] = f"data:{MIME[ext]};base64," + b64
 
 out = tpl.replace("__DATA__", data)
 out = out.replace("__LOGOS__", json.dumps(logos))

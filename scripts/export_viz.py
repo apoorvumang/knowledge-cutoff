@@ -32,14 +32,20 @@ OUT = os.path.join(HERE, "report_data.json")
 CAP = 700
 LCODE = {"correct": "c", "incorrect": "w", "abstain": "a"}
 
-# Display metadata: order + advertised cutoffs (edit as needed).
+# Display metadata: order + advertised cutoffs.
+# Advertised cutoffs sourced from official provider docs (July 2026):
+#   Claude Opus 4.8 / Sonnet 5 / Fable 5 -> Jan 2026 (Claude Platform docs)
+#   GPT-5.6 (sol) -> Feb 2026 (OpenAI model page)
+#   GPT-4o -> Oct 2023 (OpenAI model page)
+#   Gemini 3.5 Flash -> Jan 2025 (Gemini API docs)
+#   Grok 4.5 -> no official cutoff published by xAI
 MODEL_META = [
-    ("claude-fable-5", "Claude Fable 5", "not disclosed"),
-    ("gpt-5.6-sol", "GPT-5.6 (sol)", "not disclosed"),
-    ("grok-4.5", "Grok 4.5", "not disclosed"),
-    ("gemini-3.5-flash", "Gemini 3.5 Flash", "not disclosed"),
+    ("claude-fable-5", "Claude Fable 5", "Jan 2026"),
+    ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
+    ("grok-4.5", "Grok 4.5", "not published"),
+    ("gemini-3.5-flash", "Gemini 3.5 Flash", "Jan 2025"),
     ("claude-opus-4-8", "Claude Opus 4.8", "Jan 2026"),
-    ("claude-sonnet-5", "Claude Sonnet 5", "not disclosed"),
+    ("claude-sonnet-5", "Claude Sonnet 5", "Jan 2026"),
     ("gpt-4o", "GPT-4o", "Oct 2023"),
 ]
 

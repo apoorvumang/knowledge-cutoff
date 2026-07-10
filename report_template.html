@@ -208,11 +208,15 @@ function setProbe(p){
 
 /* ---------- leaderboard ---------- */
 const monthIndex = m => m ? months.indexOf(m.replace("+","")) : -1;
+function parseAdv(adv){ // "Mon YYYY" -> {y,m}, else null
+  const m=/^([A-Za-z]{3})\s+(\d{4})$/.exec((adv||"").trim());
+  if(!m) return null; const mi=MO.indexOf(m[1]); if(mi<0) return null;
+  return {y:+m[2], m:mi+1};
+}
 function gapMonths(adv, eff){
-  const A={"Jan 2026":"2026-01","Oct 2023":"2023-10"}[adv];
-  if(!A||!eff) return null;
-  const [ay,am]=A.split("-").map(Number); const [ey,em]=eff.replace("+","").split("-").map(Number);
-  return (ay*12+am)-(ey*12+em);
+  const A=parseAdv(adv); if(!A||!eff) return null;
+  const [ey,em]=eff.replace("+","").split("-").map(Number);
+  return (A.y*12+A.m)-(ey*12+em);
 }
 function renderLeaderboard(){
   const rows = DATA.models.map(m=>{

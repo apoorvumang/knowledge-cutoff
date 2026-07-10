@@ -21,7 +21,7 @@ from typing import Any
 
 import yaml
 
-DEFAULT_MAX_TOKENS = 1024
+DEFAULT_MAX_TOKENS = 2048
 
 
 @dataclass

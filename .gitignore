@@ -7,3 +7,6 @@ graded/
 data/raw_batches/
 report.html
 *.egg-info/
+report_data.json
+report_explorer.html
+scratch_frontier.log

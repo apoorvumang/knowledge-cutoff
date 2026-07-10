@@ -55,11 +55,14 @@ models:
   claude-haiku-4-5:     { provider: anthropic, model_id: claude-haiku-4-5-20251001 }
   claude-fable-5:       { provider: anthropic, model_id: claude-fable-5 }
   # --- OpenAI ---
+  gpt-5.6-sol:          { provider: openai, model_id: gpt-5.6-sol }
   gpt-5:                { provider: openai, model_id: gpt-5 }
   gpt-4o:               { provider: openai, model_id: gpt-4o }
   # --- xAI ---
+  grok-4.5:             { provider: xai, model_id: grok-4.5 }
   grok-4:               { provider: xai, model_id: grok-4 }
   # --- Google ---
+  gemini-3.5-flash:     { provider: google, model_id: gemini-3.5-flash }
   gemini-2.5-pro:       { provider: google, model_id: gemini-2.5-pro }
   # --- open-weights via Together / Fireworks (examples; edit model_id as needed) ---
   llama-3.3-70b:        { provider: together, model_id: "meta-llama/Llama-3.3-70B-Instruct-Turbo" }

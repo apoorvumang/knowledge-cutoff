@@ -1,0 +1,400 @@
+<title>Knowledge-Cutoff Benchmark — Explorer</title>
+<style>
+  :root {
+    --bg:#FAFAFB; --panel:#FFFFFF; --panel-2:#F3F4F7; --panel-3:#ECEEF3;
+    --ink:#14161C; --muted:#5A6270; --faint:#8992A2;
+    --hair:#E4E6EC; --hair-strong:#D2D6DF;
+    --good:#2E9E6B; --bad:#D6533F; --abst:#9AA6B6; --accent:#C6881E;
+    --sans:ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,"Cascadia Mono",Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#0D0F14; --panel:#14171E; --panel-2:#191D26; --panel-3:#1F2530;
+    --ink:#E6E8EE; --muted:#97A0B0; --faint:#6C7686;
+    --hair:#232833; --hair-strong:#333B48;
+    --good:#3FB77E; --bad:#E4664F; --abst:#67707E; --accent:#E0A63A;
+  }}
+  :root[data-theme="light"]{
+    --bg:#FAFAFB; --panel:#FFFFFF; --panel-2:#F3F4F7; --panel-3:#ECEEF3;
+    --ink:#14161C; --muted:#5A6270; --faint:#8992A2;
+    --hair:#E4E6EC; --hair-strong:#D2D6DF;
+    --good:#2E9E6B; --bad:#D6533F; --abst:#9AA6B6; --accent:#C6881E;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0D0F14; --panel:#14171E; --panel-2:#191D26; --panel-3:#1F2530;
+    --ink:#E6E8EE; --muted:#97A0B0; --faint:#6C7686;
+    --hair:#232833; --hair-strong:#333B48;
+    --good:#3FB77E; --bad:#E4664F; --abst:#67707E; --accent:#E0A63A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1120px;margin:0 auto;padding:clamp(24px,4vw,52px) clamp(16px,3.5vw,36px) 90px;}
+  a{color:inherit;}
+
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 12px;}
+  h1{font-size:clamp(26px,4.4vw,42px);line-height:1.06;letter-spacing:-.02em;font-weight:680;margin:0 0 16px;text-wrap:balance;max-width:22ch;}
+  .lede{font-size:clamp(15px,1.8vw,18px);color:var(--muted);margin:0;max-width:66ch;}
+  .lede b{color:var(--ink);font-weight:600;}
+
+  .section{margin-top:52px;}
+  .section-label{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin:0 0 14px;padding-bottom:9px;border-bottom:1px solid var(--hair);display:flex;justify-content:space-between;align-items:baseline;gap:12px;}
+  .section-label .hint{text-transform:none;letter-spacing:0;color:var(--faint);font-size:11.5px;}
+
+  /* probe toggle */
+  .toggle{display:inline-flex;border:1px solid var(--hair-strong);border-radius:8px;overflow:hidden;font-family:var(--mono);font-size:12px;}
+  .toggle button{appearance:none;border:0;background:var(--panel);color:var(--muted);padding:6px 14px;cursor:pointer;font:inherit;}
+  .toggle button[aria-pressed="true"]{background:var(--ink);color:var(--bg);}
+  .toggle button:not(:last-child){border-right:1px solid var(--hair-strong);}
+
+  /* leaderboard */
+  .lb{width:100%;border-collapse:collapse;font-size:14px;}
+  .lb th{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:right;padding:8px 10px;border-bottom:1px solid var(--hair);font-weight:500;}
+  .lb th:first-child,.lb td:first-child{text-align:left;}
+  .lb td{padding:11px 10px;border-bottom:1px solid var(--hair);font-variant-numeric:tabular-nums;text-align:right;}
+  .lb tr:last-child td{border-bottom:0;}
+  .lb .mname{display:inline-flex;align-items:center;gap:9px;font-weight:600;}
+  .chip-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none;}
+  .lb .eff{font-family:var(--mono);font-weight:600;color:var(--accent);}
+  .lb .gapneg{color:var(--bad);font-family:var(--mono);font-size:12px;}
+  .lb .ctl{font-family:var(--mono);font-size:12px;color:var(--muted);}
+  .lb .warn{color:var(--bad);}
+
+  /* chart */
+  .chartbox{position:relative;background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:16px 16px 8px;}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-family:var(--mono);font-size:12px;margin-bottom:6px;}
+  .legend button{appearance:none;border:0;background:none;cursor:pointer;font:inherit;color:var(--muted);display:inline-flex;align-items:center;gap:7px;padding:2px 0;opacity:1;}
+  .legend button.off{opacity:.32;text-decoration:line-through;}
+  .legend .ln{width:16px;height:0;border-top:3px solid;border-radius:2px;display:inline-block;}
+  svg{display:block;width:100%;height:auto;overflow:visible;}
+  .tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--hair-strong);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:11.5px;box-shadow:0 6px 24px rgba(0,0,0,.14);opacity:0;transition:opacity .1s;z-index:5;min-width:150px;}
+  .tip .th{color:var(--faint);margin-bottom:5px;letter-spacing:.05em;}
+  .tip .row{display:flex;justify-content:space-between;gap:12px;}
+  .tip .row b{font-variant-numeric:tabular-nums;}
+
+  /* heatmap */
+  .heat{overflow-x:auto;}
+  .heat table{border-collapse:separate;border-spacing:2px;font-family:var(--mono);font-size:11px;}
+  .heat th{color:var(--faint);font-weight:500;padding:2px 5px;white-space:nowrap;}
+  .heat th.col{writing-mode:vertical-rl;transform:rotate(180deg);text-align:right;height:52px;font-size:10px;}
+  .heat th.row{text-align:right;color:var(--ink);font-family:var(--sans);font-size:12px;font-weight:600;}
+  .heat td{width:26px;height:26px;border-radius:4px;cursor:pointer;position:relative;}
+  .heat td:hover{outline:2px solid var(--ink);outline-offset:-1px;}
+  .heat .hcap{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;align-items:center;gap:8px;margin-top:10px;}
+  .heat .scale{display:inline-flex;height:10px;width:120px;border-radius:3px;background:linear-gradient(90deg,var(--bad),#E7C14B,var(--good));}
+
+  /* explorer */
+  .explorer{display:grid;grid-template-columns:340px 1fr;gap:18px;}
+  @media (max-width:820px){.explorer{grid-template-columns:1fr;}}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .filters select,.filters input{font:inherit;font-size:13px;background:var(--panel);color:var(--ink);border:1px solid var(--hair-strong);border-radius:8px;padding:7px 10px;}
+  .filters input{flex:1;min-width:120px;}
+  .evlist{border:1px solid var(--hair);border-radius:12px;overflow:hidden;max-height:620px;overflow-y:auto;background:var(--panel);}
+  .evitem{padding:10px 12px;border-bottom:1px solid var(--hair);cursor:pointer;display:grid;gap:5px;}
+  .evitem:hover{background:var(--panel-2);}
+  .evitem[aria-selected="true"]{background:var(--panel-3);box-shadow:inset 3px 0 0 var(--accent);}
+  .evitem .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;}
+  .evitem .subj{font-weight:600;font-size:13.5px;}
+  .evitem .mo{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap;}
+  .evitem .dots{display:flex;gap:3px;}
+  .sdot{width:11px;height:11px;border-radius:3px;flex:none;}
+  .sc{background:var(--good);} .sw{background:var(--bad);} .sa{background:var(--abst);}
+  .badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid var(--hair-strong);color:var(--muted);}
+  .badge.low{color:var(--accent);border-color:var(--accent);}
+
+  .detail{border:1px solid var(--hair);border-radius:12px;padding:20px 22px;background:var(--panel);min-height:300px;}
+  .detail .q{font-size:17px;font-weight:600;line-height:1.4;margin:0 0 6px;text-wrap:balance;}
+  .detail .meta{font-family:var(--mono);font-size:11.5px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:14px;}
+  .truth{background:var(--panel-2);border-radius:9px;padding:11px 14px;font-size:13.5px;margin-bottom:6px;}
+  .truth .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--good);display:block;margin-bottom:3px;}
+  .src{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin:8px 0 18px;word-break:break-all;}
+  .ans{display:grid;gap:10px;}
+  .arow{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;padding-top:10px;border-top:1px solid var(--hair);}
+  @media (max-width:520px){.arow{grid-template-columns:1fr;gap:4px;}}
+  .arow .who{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;}
+  .arow .resp{font-size:13.5px;color:var(--ink);}
+  .arow .resp.empty{color:var(--faint);font-style:italic;}
+  .verdict{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:6px;color:#fff;align-self:flex-start;white-space:nowrap;}
+  .verdict.c{background:var(--good);} .verdict.w{background:var(--bad);} .verdict.a{background:var(--abst);}
+  .empty-state{color:var(--faint);font-size:14px;padding:40px 0;text-align:center;}
+
+  footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:12px;color:var(--faint);line-height:1.7;}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Knowledge-Cutoff Benchmark · Explorer</p>
+  <h1>What do frontier models actually know — and when did they stop knowing it?</h1>
+  <p class="lede">Each model was probed on 198 surprising, unforecastable events across 18 months. Below: where each model's knowledge collapses (its <b>effective cutoff</b>), a month-by-month heatmap, and — for every single event — <b>the exact answer each model gave</b>. Pick an event and read them yourself.</p>
+
+  <div class="section">
+    <div class="section-label"><span>Leaderboard · effective knowledge horizon</span>
+      <span class="probe-toggle"></span></div>
+    <table class="lb"><thead><tr>
+      <th>Model</th><th>Advertised</th><th>Effective cutoff</th><th>vs advertised</th>
+      <th>Alive ctl</th><th>Fake ctl</th>
+    </tr></thead><tbody id="lb-body"></tbody></table>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><span>Decay curves · % correct per month</span>
+      <span class="hint">click a model to toggle · hover for values</span></div>
+    <div class="chartbox">
+      <div class="legend" id="legend"></div>
+      <div id="chart-slot"></div>
+      <div class="tip" id="tip"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><span>Heatmap · correctness by month</span>
+      <span class="hint">click any cell to inspect those answers below</span></div>
+    <div class="heat">
+      <div id="heat-slot"></div>
+      <div class="hcap">doesn't know <span class="scale"></span> knows &nbsp;·&nbsp; shade = % correct that month</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label"><span>Event explorer · read the actual answers</span>
+      <span class="probe-toggle"></span></div>
+    <div class="filters">
+      <select id="f-month"></select>
+      <select id="f-cat"></select>
+      <select id="f-pred"></select>
+      <input id="f-search" placeholder="search subject…" />
+    </div>
+    <div class="explorer">
+      <div class="evlist" id="evlist"></div>
+      <div class="detail" id="detail"></div>
+    </div>
+  </div>
+
+  <footer>
+    direct = open question graded correct / wrong / abstain by an LLM judge holding the ground truth · mcq = 4-way forced choice (chance ≈ 25%)<br>
+    effective cutoff = last month above 50% correct that stays gone afterward · controls: living people (should be "alive") + fabricated events (should be denied)<br>
+    198 events · Jan 2025 – Jun 2026 · surprising / unforecastable only · balanced US / international
+  </footer>
+</div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const MC = {  // per-model series colors (work on both themes)
+  "claude-fable-5":"#12897A","gpt-5.6-sol":"#7A5AF0","grok-4.5":"#2E7DD6",
+  "gemini-3.5-flash":"#C64B8C","claude-opus-4-8":"#E07B39","claude-sonnet-5":"#5FA83D",
+  "gpt-4o":"#8A94A6"};
+const mcol = m => MC[m] || "#8A94A6";
+const months = DATA.months, N = months.length;
+const MO=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtMonth = m => { const [y,mo]=m.split("-"); return MO[+mo-1]+" '"+y.slice(2); };
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const state = { probe:"direct", hidden:new Set(), selected:null,
+  fMonth:"", fCat:"", fPred:"", fSearch:"" };
+
+/* ---------- probe toggles (two mirrored instances) ---------- */
+function buildToggles(){
+  document.querySelectorAll(".probe-toggle").forEach(host=>{
+    host.innerHTML = `<span class="toggle">
+      <button data-p="direct" aria-pressed="true">direct</button>
+      <button data-p="mcq" aria-pressed="false">mcq</button></span>`;
+    host.querySelectorAll("button").forEach(b=>b.onclick=()=>setProbe(b.dataset.p));
+  });
+}
+function setProbe(p){
+  state.probe=p;
+  document.querySelectorAll(".probe-toggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.p===p));
+  renderLeaderboard(); renderChart(); renderHeatmap(); renderList(); renderDetail();
+}
+
+/* ---------- leaderboard ---------- */
+const monthIndex = m => m ? months.indexOf(m.replace("+","")) : -1;
+function gapMonths(adv, eff){
+  const A={"Jan 2026":"2026-01","Oct 2023":"2023-10"}[adv];
+  if(!A||!eff) return null;
+  const [ay,am]=A.split("-").map(Number); const [ey,em]=eff.replace("+","").split("-").map(Number);
+  return (ay*12+am)-(ey*12+em);
+}
+function renderLeaderboard(){
+  const rows = DATA.models.map(m=>{
+    const s=DATA.summary[m]||{}, d=s.direct, q=s.mcq;
+    return {m, d, q, eff:d?d.cutoff:null};
+  }).sort((a,b)=> monthIndex(b.eff)-monthIndex(a.eff));
+  const body=document.getElementById("lb-body"); body.innerHTML="";
+  rows.forEach(({m,d,q,eff})=>{
+    const lab=DATA.labels[m], adv=lab.advertised;
+    const gap=gapMonths(adv, eff);
+    const ctl = (s,key)=>{ const c=(s&&s.controls)||{}; return key==="alive"
+      ? `${c.alive_correct||0}/${c.alive_n||0}` : `${c.fake_confirmed||0}/${c.fake_n||0}`; };
+    const aliveMiss = d&&d.controls&&d.controls.alive_correct<d.controls.alive_n;
+    const fakeBad = d&&d.controls&&d.controls.fake_confirmed>0;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td><span class="mname"><i class="chip-dot" style="background:${mcol(m)}"></i>${lab.name}</span></td>
+      <td class="ctl">${adv}</td>
+      <td class="eff">${eff?fmtMonth(eff):"—"}</td>
+      <td>${gap!=null?`<span class="${gap>0?'gapneg':''}">${gap>0?'−'+gap+' mo':(gap===0?'match':'+'+(-gap)+' mo')}</span>`:'<span class="ctl">—</span>'}</td>
+      <td class="ctl ${aliveMiss?'warn':''}">${ctl(d,"alive")}</td>
+      <td class="ctl ${fakeBad?'warn':''}">${ctl(d,"fake")}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+/* ---------- decay curve chart ---------- */
+function renderChart(){
+  const slot=document.getElementById("chart-slot"); slot.innerHTML="";
+  const W=880,H=300,padL=34,padR=14,padT=16,padB=42;
+  const x=i=>padL+(W-padL-padR)*(i/(N-1));
+  const y=v=>padT+(H-padT-padB)*(1-v);
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(NS,"svg"); svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.id="chart";
+  const add=(t,a,p=svg)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e;};
+  [0,.25,.5,.75,1].forEach(v=>{const yy=y(v),thr=v===.5;
+    add("line",{x1:padL,y1:yy,x2:W-padR,y2:yy,stroke:thr?"var(--hair-strong)":"var(--hair)","stroke-width":1,"stroke-dasharray":thr?"2 3":""});
+    add("text",{x:padL-7,y:yy+3,"text-anchor":"end","font-family":"var(--mono)","font-size":9.5,fill:"var(--faint)"}).textContent=v*100;});
+  months.forEach((m,i)=>{const mo=+m.split("-")[1];
+    if(mo%3===1){add("line",{x1:x(i),y1:H-padB,x2:x(i),y2:H-padB+4,stroke:"var(--hair-strong)","stroke-width":1});
+      add("text",{x:x(i),y:H-padB+15,"text-anchor":"middle","font-family":"var(--mono)","font-size":9,fill:"var(--faint)"}).textContent=fmtMonth(m);}});
+  DATA.models.forEach(m=>{
+    if(state.hidden.has(m)) return;
+    const s=DATA.summary[m]&&DATA.summary[m][state.probe]; if(!s) return;
+    const arr=s.curve.map(c=>c.k);
+    const d=arr.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+    const p=add("path",{d,fill:"none",stroke:mcol(m),"stroke-width":2.4,"stroke-linejoin":"round","stroke-linecap":"round","opacity":.92});
+    const ci=s.cutoff?monthIndex(s.cutoff):-1;
+    if(ci>=0) add("circle",{cx:x(ci),cy:y(arr[ci]),r:3.2,fill:mcol(m),stroke:"var(--panel)","stroke-width":1.5});
+    if(!reduce){const L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;
+      p.animate([{strokeDashoffset:L},{strokeDashoffset:0}],{duration:900,easing:"ease-out",fill:"forwards"});}
+  });
+  // hover guide
+  const guide=add("line",{x1:0,y1:padT,x2:0,y2:H-padB,stroke:"var(--ink)","stroke-width":1,opacity:0});
+  const tip=document.getElementById("tip");
+  svg.addEventListener("mousemove",ev=>{
+    const r=svg.getBoundingClientRect(); const px=(ev.clientX-r.left)/r.width*W;
+    let i=Math.round((px-padL)/((W-padL-padR)/(N-1))); i=Math.max(0,Math.min(N-1,i));
+    guide.setAttribute("x1",x(i));guide.setAttribute("x2",x(i));guide.setAttribute("opacity",.4);
+    const rows=DATA.models.filter(m=>!state.hidden.has(m)).map(m=>{
+      const s=DATA.summary[m]&&DATA.summary[m][state.probe]; if(!s)return"";
+      return `<div class="row"><span style="color:${mcol(m)}">${DATA.labels[m].name}</span><b>${Math.round(s.curve[i].k*100)}%</b></div>`;}).join("");
+    tip.innerHTML=`<div class="th">${fmtMonth(months[i])}</div>${rows}`;
+    tip.style.opacity=1;
+    const box=svg.getBoundingClientRect();
+    let left=(ev.clientX-box.left)+16; if(left>box.width-170)left=(ev.clientX-box.left)-170;
+    tip.style.left=left+"px"; tip.style.top=Math.max(8,ev.clientY-box.top-10)+"px";
+  });
+  svg.addEventListener("mouseleave",()=>{guide.setAttribute("opacity",0);tip.style.opacity=0;});
+  slot.appendChild(svg);
+  // legend
+  const lg=document.getElementById("legend"); lg.innerHTML="";
+  DATA.models.forEach(m=>{
+    const b=document.createElement("button"); b.className=state.hidden.has(m)?"off":"";
+    b.innerHTML=`<i class="ln" style="border-color:${mcol(m)}"></i>${DATA.labels[m].name}`;
+    b.onclick=()=>{ state.hidden.has(m)?state.hidden.delete(m):state.hidden.add(m); renderChart(); };
+    lg.appendChild(b);
+  });
+}
+
+/* ---------- heatmap ---------- */
+function heatColor(v){ // 0..1 -> red..amber..green
+  const stops=[[214,83,63],[231,193,75],[46,158,107]];
+  const t=v<=.5? v/.5 : (v-.5)/.5; const a=v<=.5?stops[0]:stops[1], b=v<=.5?stops[1]:stops[2];
+  const c=a.map((s,i)=>Math.round(s+(b[i]-s)*t)); return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function renderHeatmap(){
+  const slot=document.getElementById("heat-slot"); slot.innerHTML="";
+  const tbl=document.createElement("table");
+  let head="<tr><th></th>"+months.map(m=>`<th class="col">${fmtMonth(m)}</th>`).join("")+"</tr>";
+  let body=DATA.models.map(m=>{
+    const s=DATA.summary[m]&&DATA.summary[m][state.probe];
+    const cells=months.map((mo,i)=>{
+      const k=s?s.curve[i].k:0, n=s?s.curve[i].n:0;
+      return `<td title="${DATA.labels[m].name} · ${fmtMonth(mo)} · ${Math.round(k*100)}% (n=${n})"
+        style="background:${heatColor(k)}" data-m="${m}" data-mo="${mo}"></td>`;
+    }).join("");
+    return `<tr><th class="row">${DATA.labels[m].name}</th>${cells}</tr>`;
+  }).join("");
+  tbl.innerHTML=head+body;
+  tbl.querySelectorAll("td").forEach(td=>td.onclick=()=>{
+    state.fMonth=td.dataset.mo; state.fCat=""; state.fPred=""; state.fSearch="";
+    syncFilters(); renderList();
+    // auto-select first event in that month where this model is wrong, else first
+    const evs=filteredEvents();
+    const model=td.dataset.m;
+    const pick=evs.find(e=>ans(model,e.id)&&ans(model,e.id).l==="w")||evs[0];
+    if(pick){ state.selected=pick.id; renderList(); renderDetail();
+      document.getElementById("evlist").scrollTop=0; }
+    document.querySelector(".explorer").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
+  });
+  slot.appendChild(tbl);
+}
+
+/* ---------- explorer ---------- */
+const ans=(m,eid)=>{const a=DATA.answers[m]&&DATA.answers[m][state.probe]; return a&&a[eid];};
+function initFilters(){
+  const cats=[...new Set(DATA.events.map(e=>e.category))];
+  const opt=(v,t)=>`<option value="${v}">${t}</option>`;
+  document.getElementById("f-month").innerHTML=opt("","all months")+months.map(m=>opt(m,fmtMonth(m))).join("");
+  document.getElementById("f-cat").innerHTML=opt("","all categories")+cats.map(c=>opt(c,c.replace("_"," "))).join("");
+  document.getElementById("f-pred").innerHTML=opt("","all surprise levels")+["low","medium","high"].map(p=>opt(p,p+" surprise")).join("");
+  const bind=(id,key)=>{const el=document.getElementById(id);el.value=state[key];
+    el.oninput=()=>{state[key]=el.value;renderList();};};
+  bind("f-month","fMonth");bind("f-cat","fCat");bind("f-pred","fPred");bind("f-search","fSearch");
+}
+function syncFilters(){["f-month","f-cat","f-pred","f-search"].forEach((id,i)=>{
+  const k=["fMonth","fCat","fPred","fSearch"][i]; document.getElementById(id).value=state[k];});}
+function filteredEvents(){
+  const q=state.fSearch.toLowerCase();
+  return DATA.events.filter(e=>
+    (!state.fMonth||e.month===state.fMonth)&&
+    (!state.fCat||e.category===state.fCat)&&
+    (!state.fPred||e.predictability===state.fPred)&&
+    (!q||e.subject.toLowerCase().includes(q)));
+}
+function renderList(){
+  const list=document.getElementById("evlist"); const evs=filteredEvents();
+  if(!evs.length){list.innerHTML=`<div class="empty-state">no events match</div>`;return;}
+  list.innerHTML=evs.map(e=>{
+    const dots=DATA.models.map(m=>{const a=ans(m,e.id);const c=a?{c:"sc",w:"sw",a:"sa"}[a.l]:"sa";
+      return `<i class="sdot ${c}" title="${DATA.labels[m].name}"></i>`;}).join("");
+    const low=e.predictability==="low";
+    return `<div class="evitem" data-id="${e.id}" aria-selected="${state.selected===e.id}">
+      <div class="top"><span class="subj">${e.subject}</span><span class="mo">${fmtMonth(e.month)}</span></div>
+      <div class="top"><span class="badge ${low?'low':''}">${e.predictability} surprise</span><span class="dots">${dots}</span></div>
+    </div>`;}).join("");
+  list.querySelectorAll(".evitem").forEach(it=>it.onclick=()=>{state.selected=it.dataset.id;
+    list.querySelectorAll(".evitem").forEach(x=>x.setAttribute("aria-selected",x.dataset.id===it.dataset.id));
+    renderDetail();});
+}
+function renderDetail(){
+  const box=document.getElementById("detail");
+  let e=DATA.events.find(x=>x.id===state.selected);
+  if(!e){const f=filteredEvents(); e=f[0]; if(e)state.selected=e.id;}
+  if(!e){box.innerHTML=`<div class="empty-state">select an event</div>`;return;}
+  const mcq=state.probe==="mcq";
+  const q = mcq ? e.mcq_q+"<br><span style='font-family:var(--mono);font-size:12.5px;color:var(--muted)'>"+e.mcq_choices.join("&nbsp; ")+"</span>" : e.q;
+  const truth = mcq ? ("Correct choice: "+e.mcq_answer+" — "+ (e.mcq_choices.find(c=>c.trim().startsWith(e.mcq_answer))||"") ) : e.expected;
+  const rows=DATA.models.map(m=>{
+    const a=ans(m,e.id);
+    const l=a?a.l:"a"; const vlabel={c:"correct",w:"wrong",a:"abstain"}[l];
+    let r = a&&a.r ? a.r : (a? "(no answer recorded)":"(not evaluated)");
+    return `<div class="arow">
+      <div class="who"><i class="chip-dot" style="background:${mcol(m)}"></i>${DATA.labels[m].name}
+        <span class="verdict ${l}">${vlabel}</span></div>
+      <div class="resp ${a&&a.r?'':'empty'}">${escapeHtml(r)}</div></div>`;
+  }).join("");
+  box.innerHTML=`
+    <p class="q">${q}</p>
+    <div class="meta"><span>${e.subject}</span><span>${fmtMonth(e.month)}</span>
+      <span>${e.category.replace("_"," ")}</span><span>${e.predictability} surprise</span><span>${e.region}</span></div>
+    <div class="truth"><span class="k">Ground truth</span>${escapeHtml(truth)}</div>
+    ${e.source&&e.source!=="n/a"?`<div class="src">source · ${escapeHtml(e.source)}</div>`:""}
+    <div class="ans">${rows}</div>`;
+}
+function escapeHtml(s){return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+
+/* ---------- boot ---------- */
+buildToggles(); renderLeaderboard(); renderChart(); renderHeatmap();
+initFilters();
+// default: the Charlie Kirk assassination, if present
+const kirk=DATA.events.find(e=>/kirk/i.test(e.subject)); if(kirk)state.selected=kirk.id;
+renderList(); renderDetail();
+</script>

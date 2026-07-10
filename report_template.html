@@ -223,6 +223,18 @@ function gapMonths(adv, eff){
   const [ey,em]=eff.replace("+","").split("-").map(Number);
   return (A.y*12+A.m)-(ey*12+em);
 }
+function ym(s){ const [y,m]=s.split("-").map(Number); return y*12+m; }
+// Returns {html} for the "vs advertised" cell.
+function gapCell(adv, eff){
+  const A=parseAdv(adv); if(!A) return '<span class="ctl">—</span>';
+  if(eff===null){ // effective horizon is before the window even starts
+    const N=(A.y*12+A.m)-ym(months[0]);   // advertised minus window start
+    return N>0 ? `<span class="gapneg">&gt; ${N} mo</span>` : '<span class="ctl">—</span>';
+  }
+  const g=gapMonths(adv, eff);
+  return g>0 ? `<span class="gapneg">−${g} mo</span>`
+      : (g===0 ? '<span class="ctl">match</span>' : `<span class="ctl">+${-g} mo</span>`);
+}
 function renderLeaderboard(){
   const rows = DATA.models.map(m=>{
     const s=DATA.summary[m]||{}, d=s.direct, q=s.mcq;
@@ -231,7 +243,6 @@ function renderLeaderboard(){
   const body=document.getElementById("lb-body"); body.innerHTML="";
   rows.forEach(({m,d,q,eff})=>{
     const lab=DATA.labels[m], adv=lab.advertised;
-    const gap=gapMonths(adv, eff);
     const ctl = (s,key)=>{ const c=(s&&s.controls)||{}; return key==="alive"
       ? `${c.alive_correct||0}/${c.alive_n||0}` : `${c.fake_confirmed||0}/${c.fake_n||0}`; };
     const aliveMiss = d&&d.controls&&d.controls.alive_correct<d.controls.alive_n;
@@ -241,7 +252,7 @@ function renderLeaderboard(){
       <td><span class="mname"><i class="chip-dot" style="background:${mcol(m)}"></i>${lab.name}</span></td>
       <td class="ctl">${adv}</td>
       <td class="eff">${displayEff(eff)}</td>
-      <td>${gap!=null?`<span class="${gap>0?'gapneg':''}">${gap>0?'−'+gap+' mo':(gap===0?'match':'+'+(-gap)+' mo')}</span>`:'<span class="ctl">—</span>'}</td>
+      <td>${gapCell(adv, eff)}</td>
       <td class="ctl ${aliveMiss?'warn':''}">${ctl(d,"alive")}</td>
       <td class="ctl ${fakeBad?'warn':''}">${ctl(d,"fake")}</td>`;
     body.appendChild(tr);

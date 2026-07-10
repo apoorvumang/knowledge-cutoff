@@ -36,7 +36,8 @@ def _clean(obj: dict) -> dict:
 
 
 def main() -> None:
-    sources = sorted(glob.glob(os.path.join(DATA, "_batch_*.jsonl")))
+    sources = sorted(glob.glob(os.path.join(DATA, "_batch_*.jsonl")) +
+                     glob.glob(os.path.join(DATA, "raw_batches", "_batch_*.jsonl")))
     controls = os.path.join(DATA, "controls.jsonl")
     if os.path.exists(controls):
         sources.append(controls)

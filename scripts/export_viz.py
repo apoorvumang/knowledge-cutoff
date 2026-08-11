@@ -53,6 +53,8 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #   Inkling -> no official cutoff published. Its model card (thinkingmachines.ai/
 #     model-card/inkling/) concedes one exists without naming it: "Inkling's knowledge
 #     is limited to information available as of its training cutoff."
+#   Kimi K3 -> no official cutoff published; absent from the HF model card
+#     (huggingface.co/moonshotai/Kimi-K3) and the public technical report.
 MODEL_META = [
     ("claude-fable-5", "Claude Fable 5", "Jan 2026"),
     ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
@@ -67,6 +69,7 @@ MODEL_META = [
     ("muse-glimmer-30b", "Muse Glimmer 30B", "Jan 2026"),
     ("qwen3.8-max", "Qwen3.8 Max", "not published"),
     ("inkling", "Inkling", "not published"),
+    ("kimi-k3", "Kimi K3", "not published"),
     ("glm-5.2", "GLM-5.2", "not published"),
     ("deepseek-v4-pro", "DeepSeek-V4-Pro", "not published"),
     ("deepseek-v4-flash-0731", "DeepSeek V4 Flash (0731)", "not published"),

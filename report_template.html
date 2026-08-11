@@ -88,6 +88,18 @@
   .heat td{width:26px;height:26px;border-radius:4px;cursor:pointer;position:relative;}
   .heat td:hover{outline:2px solid var(--ink);outline-offset:-1px;}
   .heat td.claimed{box-shadow:inset 0 0 0 2.5px var(--accent), inset 0 0 0 3.5px rgba(0,0,0,.22);z-index:1;}
+  /* show/hide controls above the heatmap */
+  .hctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;
+    color:var(--faint);margin-bottom:10px;}
+  .hctl .count{letter-spacing:.04em;}
+  .hctl button{appearance:none;border:1px solid var(--hair-strong);background:var(--panel);cursor:pointer;
+    font:inherit;color:var(--muted);border-radius:6px;padding:3px 8px;}
+  .hctl button:hover{color:var(--ink);border-color:var(--ink);}
+  .hctl .restore{display:inline-flex;align-items:center;gap:5px;}
+  .hctl .sep{color:var(--hair-strong);}
+  .heat th.row .rl{cursor:pointer;}
+  .heat th.row .rl:hover{color:var(--ink);text-decoration:line-through;}
+  .heat .allhidden{color:var(--faint);font-family:var(--mono);font-size:12px;padding:18px 2px;}
   /* probe not measured / withheld: faint hatch, readable as "absent" not "zero" */
   .heat td.nodata{background:repeating-linear-gradient(45deg,var(--panel-3) 0 3px,transparent 3px 6px);
     box-shadow:inset 0 0 0 1px var(--hair);cursor:default;}
@@ -149,6 +161,7 @@
       <span class="hint">amber ring = the model's <em>claimed</em> cutoff · click any cell to read those answers</span>
       <span class="probe-toggle"></span></div>
     <div class="heat">
+      <div id="heat-controls" class="hctl"></div>
       <div id="heat-slot"></div>
       <div class="hcap">doesn't know <span class="scale"></span> knows &nbsp;·&nbsp; shade = % correct that month &nbsp;·&nbsp; <span class="claimed-key"></span> claimed cutoff (where the model says its knowledge ends)</div>
     </div>
@@ -216,7 +229,11 @@ const MC = {  // per-model series colors (work on both themes)
   // nearest neighbours -- qwen3.8-max reads close to gpt-5.5, inkling close to
   // sonnet-5. The curve chart is no longer readable by hue alone at this count;
   // toggle to a handful of models to compare them. Facet before adding an 18th.
-  "qwen3.8-max":"#9A0DF2","inkling":"#298E29"};
+  "qwen3.8-max":"#9A0DF2","inkling":"#298E29",
+  // 18th. Best remaining is ΔE 10.3 (vs gemini-3.5-flash / gemini-3.1-pro) -- ambiguous
+  // by hue, which is why the heatmap and chart now share show/hide controls: compare a
+  // few models at a time rather than trusting 18 colors at once.
+  "kimi-k3":"#A764C4"};
 const mcol = m => MC[m] || "#8A94A6";
 
 // Provider identity: real brand logos (embedded as base64 data: URIs at build
@@ -229,6 +246,7 @@ const PROV = {
   // Drop the official SVG in that directory and the build picks it up automatically.
   meta:{name:"Meta Superintelligence Labs"},
   qwen:{name:"Alibaba Qwen"}, thinkingmachines:{name:"Thinking Machines Lab"},
+  moonshot:{name:"Moonshot AI"},
 };
 const MODEL_PROV = {
   "claude-fable-5":"anthropic","claude-opus-4-8":"anthropic","claude-sonnet-5":"anthropic",
@@ -237,7 +255,7 @@ const MODEL_PROV = {
   "glm-5.2":"zhipu","deepseek-v4-pro":"deepseek",
   "deepseek-v4-flash-0731":"deepseek",
   "muse-spark-1.2":"meta","muse-glimmer-30b":"meta",
-  "qwen3.8-max":"qwen","inkling":"thinkingmachines",
+  "qwen3.8-max":"qwen","inkling":"thinkingmachines","kimi-k3":"moonshot",
 };
 function makeBadge(pk){
   const p=PROV[pk]||{name:pk}; const src=LOGOS[pk];
@@ -388,7 +406,7 @@ function renderChart(){
   DATA.models.forEach(m=>{
     const b=document.createElement("button"); b.className=state.hidden.has(m)?"off":"";
     b.innerHTML=`<i class="ln" style="border-color:${mcol(m)}"></i>${badge(m)}${DATA.labels[m].name}`;
-    b.onclick=()=>{ state.hidden.has(m)?state.hidden.delete(m):state.hidden.add(m); renderChart(); };
+    b.onclick=()=>{ state.hidden.has(m)?state.hidden.delete(m):state.hidden.add(m); syncViews(); };
     lg.appendChild(b);
   });
 }
@@ -399,11 +417,43 @@ function heatColor(v){ // 0..1 -> red..amber..green
   const t=v<=.5? v/.5 : (v-.5)/.5; const a=v<=.5?stops[0]:stops[1], b=v<=.5?stops[1]:stops[2];
   const c=a.map((s,i)=>Math.round(s+(b[i]-s)*t)); return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
+// Chart and heatmap share one visibility set, so hiding a model hides it in both
+// and there is only ever one place to undo it.
+function syncViews(){ renderChart(); renderHeatmap(); }
+
+function renderHeatControls(){
+  const box=document.getElementById("heat-controls"); if(!box) return;
+  const all=DATA.models, hidden=all.filter(m=>state.hidden.has(m));
+  const shown=all.length-hidden.length;
+  const bits=[`<span class="count">${shown} of ${all.length} models shown</span>`];
+  if(hidden.length) bits.push(`<button data-act="all">show all</button>`);
+  if(shown) bits.push(`<button data-act="none">hide all</button>`);
+  if(hidden.length){
+    bits.push(`<span class="sep">·</span><span class="count">click to restore:</span>`);
+    hidden.forEach(m=>bits.push(
+      `<button class="restore" data-restore="${m}">${badge(m)}${DATA.labels[m].name}</button>`));
+  }
+  box.innerHTML=bits.join(" ");
+  box.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    const act=b.dataset.act;
+    if(act==="all") state.hidden.clear();
+    else if(act==="none") DATA.models.forEach(m=>state.hidden.add(m));
+    else state.hidden.delete(b.dataset.restore);
+    syncViews();
+  });
+}
+
 function renderHeatmap(){
+  renderHeatControls();
   const slot=document.getElementById("heat-slot"); slot.innerHTML="";
+  const visible=DATA.models.filter(m=>!state.hidden.has(m));
+  if(!visible.length){
+    slot.innerHTML=`<div class="allhidden">All models hidden — use “show all” above to bring them back.</div>`;
+    return;
+  }
   const tbl=document.createElement("table");
   let head="<tr><th></th>"+months.map(m=>`<th class="col">${fmtMonth(m)}</th>`).join("")+"</tr>";
-  let body=DATA.models.map(m=>{
+  let body=visible.map(m=>{
     const s=DATA.summary[m]&&DATA.summary[m][state.probe];
     const ci=advIndex(m);
     const cells=months.map((mo,i)=>{
@@ -422,9 +472,14 @@ function renderHeatmap(){
       return `<td class="${claimed?'claimed':''}" title="${t}"
         style="background:${heatColor(k)}" data-m="${m}" data-mo="${mo}"></td>`;
     }).join("");
-    return `<tr><th class="row"><span class="rl">${badge(m)}${DATA.labels[m].name}</span></th>${cells}</tr>`;
+    return `<tr><th class="row"><span class="rl" data-hide="${m}"
+      title="hide ${DATA.labels[m].name}">${badge(m)}${DATA.labels[m].name}</span></th>${cells}</tr>`;
   }).join("");
   tbl.innerHTML=head+body;
+  // clicking a row label hides that model, right where the crowding is
+  tbl.querySelectorAll(".rl[data-hide]").forEach(el=>el.onclick=()=>{
+    state.hidden.add(el.dataset.hide); syncViews();
+  });
   tbl.querySelectorAll("td").forEach(td=>td.onclick=()=>{
     state.fMonth=td.dataset.mo; state.fCat=""; state.fPred=""; state.fSearch="";
     syncFilters(); renderList();

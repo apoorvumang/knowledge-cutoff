@@ -137,7 +137,9 @@ kc eval --model <key> --probe mcq --retry-failed --max-tokens 4096
 
 Anything that couldn't be graded — an API error, a truncated completion, or a
 judge that errored — is labelled **`ungraded`**, never `abstain`. An abstention
-is a real model behaviour; ungraded is missing data. Scoring drops ungraded rows
+is a real model behaviour; ungraded is missing data. This applies to **both**
+probes: under `mcq`, an empty completion is ungraded, while text that came back
+without naming an option is a genuine abstention and still scores as one. Scoring drops ungraded rows
 from every denominator and prints a warning, and `export_viz.py` refuses to
 publish a probe with >5% ungraded rows. (Without this, a judge whose API credit
 ran out silently renders *every* model as 100% abstain, which looks like a

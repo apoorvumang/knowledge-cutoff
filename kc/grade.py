@@ -79,9 +79,17 @@ def extract_mcq_letter(text: str, valid: list[str]) -> str | None:
 
 def grade_mcq(row: dict, ev: Event) -> dict:
     if row.get("error"):
-        return {**_base(row, ev), "label": "abstain", "reason": "api error"}
+        return {**_base(row, ev), "label": UNGRADED, "reason": f"api error: {row['error']}"[:300]}
+    if not (row.get("response") or "").strip():
+        # Nothing came back at all (usually finish_reason == "length" -- a reasoning
+        # model that spent its budget before emitting a letter). That is missing
+        # data, not a choice. Scoring it "abstain" counts against known_rate and
+        # pushes the estimated cutoff earlier.
+        return {**_base(row, ev), "label": UNGRADED, "reason": "empty or truncated response"}
     letter = extract_mcq_letter(row["response"], ev.mcq_letters())
     if letter is None:
+        # Text came back but named no option: a real refusal/hedge under forced
+        # choice, so this one IS an abstention.
         label, reason = "abstain", "no parseable letter"
     elif letter == ev.mcq_answer:
         label, reason = "correct", f"chose {letter}"

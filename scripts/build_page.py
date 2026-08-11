@@ -27,6 +27,9 @@ for path in sorted(glob.glob(os.path.join(HERE, "assets", "logos", "*.svg")) +
 
 out = tpl.replace("__DATA__", data)
 out = out.replace("__LOGOS__", json.dumps(logos))
+# Model count is derived, not hardcoded, so prose can't drift as models are added.
+nmodels = len(json.loads(open(os.path.join(HERE, "report_data.json"), encoding="utf-8").read())["models"])
+out = out.replace("__NMODELS__", str(nmodels))
 # Local build artifact (used for the claude.ai Artifact) ...
 dest = os.path.join(HERE, "report_explorer.html")
 open(dest, "w", encoding="utf-8").write(out)

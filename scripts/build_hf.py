@@ -20,6 +20,11 @@ HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "hf_dataset")
 LABEL = {"c": "correct", "w": "incorrect", "a": "abstain"}  # from graded codes
 FULL = {"correct": "correct", "incorrect": "incorrect", "abstain": "abstain"}
+# Rows the pipeline could not grade (API error, truncated completion, judge
+# failure) are NOT results and are dropped from the published dataset rather than
+# coerced to "abstain" -- a consumer computing accuracy would otherwise read an
+# outage as the model declining to answer.
+UNGRADED = "ungraded"
 
 
 def main() -> None:
@@ -32,6 +37,7 @@ def main() -> None:
 
     # results.jsonl — flatten graded/*.jsonl
     rows = []
+    n_ungraded = 0
     for g in sorted(glob.glob(os.path.join(HERE, "graded", "*.jsonl"))):
         base = os.path.basename(g)[:-6]
         model, probe = base.rsplit("__", 1)
@@ -41,6 +47,14 @@ def main() -> None:
                 if not line:
                     continue
                 r = json.loads(line)
+                label = r.get("label", "abstain")
+                if label == UNGRADED:
+                    n_ungraded += 1
+                    continue
+                if label not in FULL:
+                    raise RuntimeError(
+                        f"{base}: unexpected label {label!r} -- refusing to publish "
+                        f"a dataset with labels this script cannot represent")
                 rows.append({
                     "model": model,
                     "probe": probe,
@@ -48,7 +62,7 @@ def main() -> None:
                     "month": r["month"],
                     "category": r["category"],
                     "predictability": r["predictability"],
-                    "label": FULL.get(r.get("label", "abstain"), "abstain"),
+                    "label": FULL[label],
                     "response": r.get("response", ""),
                 })
     with open(os.path.join(OUT, "results.jsonl"), "w", encoding="utf-8") as f:
@@ -63,6 +77,8 @@ def main() -> None:
     models = sorted({r["model"] for r in rows})
     print(f"hf_dataset/ ready: {n_events} events, {len(rows)} result rows, "
           f"{len(models)} models")
+    if n_ungraded:
+        print(f"  dropped {n_ungraded} ungraded row(s) (not results — re-grade to include)")
     print("  models:", ", ".join(models))
 
 

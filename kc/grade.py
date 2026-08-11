@@ -32,6 +32,14 @@ from .providers import Model, get_model
 from .schema import Event, load_events
 
 LABELS = {"correct", "incorrect", "abstain"}
+# Not a grade: the row could not be graded at all (model API error, a truncated /
+# blank completion, or a judge that errored or returned nonsense). These MUST NOT
+# collapse into "abstain" -- an abstention is a real, informative model behaviour
+# ("I'm not aware of that"), whereas UNGRADED is missing data. Scoring them as
+# abstentions makes a model look ignorant and drags its effective cutoff earlier;
+# a dead judge would silently render every model 100% abstain. Excluded from the
+# curve by score.py and reported separately.
+UNGRADED = "ungraded"
 
 JUDGE_SYSTEM = (
     "You are a strict grader. You are given a QUESTION, the GROUND TRUTH answer, "
@@ -93,19 +101,21 @@ def _judge_prompt(ev: Event, answer: str) -> str:
 
 def grade_direct(row: dict, ev: Event, judge: Model) -> dict:
     if row.get("error"):
-        return {**_base(row, ev), "label": "abstain", "reason": "api error"}
+        return {**_base(row, ev), "label": UNGRADED, "reason": f"api error: {row['error']}"[:300]}
     if not row["response"].strip():
-        return {**_base(row, ev), "label": "abstain", "reason": "empty response"}
+        # Includes finish_reason == "length": the model burned its budget before
+        # answering. No answer was given, so there is nothing to grade.
+        return {**_base(row, ev), "label": UNGRADED, "reason": "empty or truncated response"}
     try:
         text, _ = judge.complete(_judge_prompt(ev, row["response"]), JUDGE_SYSTEM,
                                  max_tokens=300)
         obj = _parse_json(text)
         label = str(obj.get("label", "")).lower().strip()
-        if label not in LABELS:
-            label = "abstain"
         reason = str(obj.get("reason", ""))[:300]
+        if label not in LABELS:
+            label, reason = UNGRADED, f"judge returned unusable label {label!r}"
     except Exception as e:
-        label, reason = "abstain", f"judge error: {e}"
+        label, reason = UNGRADED, f"judge error: {e}"[:300]
     return {**_base(row, ev), "label": label, "reason": reason}
 
 
@@ -131,7 +141,7 @@ def _parse_json(text: str) -> dict:
 
 
 def grade_run(run_path: str, events_path: str, out_path: str,
-              judge_key: str = "claude-opus-4-8", concurrency: int = 8) -> str:
+              judge_key: str = "judge-opus-4-8", concurrency: int = 8) -> str:
     events = {ev.id: ev for ev in load_events(events_path)}
     rows = []
     with open(run_path, encoding="utf-8") as f:

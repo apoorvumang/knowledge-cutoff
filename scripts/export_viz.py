@@ -30,7 +30,8 @@ from kc.score import summarize
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "report_data.json")
 CAP = 700
-LCODE = {"correct": "c", "incorrect": "w", "abstain": "a"}
+LCODE = {"correct": "c", "incorrect": "w", "abstain": "a", "ungraded": "u"}
+UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 
 # Display metadata: order + advertised cutoffs.
 # Advertised cutoffs sourced from official provider docs (July 2026):
@@ -40,6 +41,18 @@ LCODE = {"correct": "c", "incorrect": "w", "abstain": "a"}
 #   Gemini 3.5 Flash / 3.1 Pro -> Jan 2025 (Gemini API docs + DeepMind model card)
 #   Grok 4.5 -> no official cutoff published by xAI (the "Dec 2025" figure is Grok 4.3)
 #   GLM-5.2, DeepSeek-V4-Pro -> no official cutoff published (secondary figures unattributed)
+#   Muse Glimmer 30B -> Jan 2026, stated verbatim on the official HF model card
+#     ("Knowledge cutoff: January 4, 2026"), huggingface.co/meta-models/Muse-Glimmer-30B
+#   Muse Spark 1.2 -> no official cutoff published. It is Glimmer's teacher (Glimmer is
+#     distilled from it), so Jan 2026 is a tempting inference — deliberately NOT made here:
+#     distillation does not pin the teacher's own horizon.
+#   DeepSeek V4 Flash 0731 -> no official cutoff published; DeepSeek documents 0731 as a
+#     post-training revision of V4 Flash and publishes no data cutoff for it.
+#   Qwen3.8 Max -> no official cutoff published; as of Aug 2026 Alibaba has shipped no
+#     model card or technical report for it at all.
+#   Inkling -> no official cutoff published. Its model card (thinkingmachines.ai/
+#     model-card/inkling/) concedes one exists without naming it: "Inkling's knowledge
+#     is limited to information available as of its training cutoff."
 MODEL_META = [
     ("claude-fable-5", "Claude Fable 5", "Jan 2026"),
     ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
@@ -50,8 +63,13 @@ MODEL_META = [
     ("gemini-3.1-pro", "Gemini 3.1 Pro", "Jan 2025"),
     ("claude-opus-4-8", "Claude Opus 4.8", "Jan 2026"),
     ("claude-sonnet-5", "Claude Sonnet 5", "Jan 2026"),
+    ("muse-spark-1.2", "Muse Spark 1.2", "not published"),
+    ("muse-glimmer-30b", "Muse Glimmer 30B", "Jan 2026"),
+    ("qwen3.8-max", "Qwen3.8 Max", "not published"),
+    ("inkling", "Inkling", "not published"),
     ("glm-5.2", "GLM-5.2", "not published"),
     ("deepseek-v4-pro", "DeepSeek-V4-Pro", "not published"),
+    ("deepseek-v4-flash-0731", "DeepSeek V4 Flash (0731)", "not published"),
     ("gpt-4o", "GPT-4o", "Oct 2023"),
 ]
 
@@ -74,7 +92,7 @@ def main() -> None:
         model, probe = base.rsplit("__", 1)
         present.add(model)
 
-    models = [m for m, _, _ in MODEL_META if m in present]
+    known = [m for m, _, _ in MODEL_META if m in present]
     labels = {m: {"name": n, "advertised": a} for m, n, a in MODEL_META}
 
     answers: dict = {}
@@ -82,9 +100,19 @@ def main() -> None:
     for g in sorted(graded):
         base = os.path.basename(g)[:-6]
         model, probe = base.rsplit("__", 1)
-        if model not in models:
+        if model not in known:
             continue
         s = summarize(g)
+        # Refuse to publish a (model, probe) whose grades are largely missing --
+        # e.g. a judge that ran out of API credit turns every row ungraded, which
+        # would render as a confident "this model knows nothing" curve. Re-grade
+        # from the preserved runs/ file and re-export instead.
+        ungraded = s.get("ungraded", 0)
+        total = s["n_events"] + ungraded
+        if total and ungraded / total > UNGRADED_MAX:
+            print(f"  SKIP {model}/{probe}: {ungraded}/{total} rows ungraded "
+                  f"(>{UNGRADED_MAX:.0%}) -- re-grade before publishing")
+            continue
         summary.setdefault(model, {})[probe] = {
             "curve": [{"m": c["month"], "k": round(c["known_rate"], 3),
                        "w": round(c["wrong_rate"], 3), "a": round(c["abstain_rate"], 3),
@@ -105,6 +133,9 @@ def main() -> None:
                     entry["r"] = resp[:CAP] + ("…" if len(resp) > CAP else "")
                 amap[row["event_id"]] = entry
         answers.setdefault(model, {})[probe] = amap
+
+    # Only models with at least one publishable probe, in MODEL_META order.
+    models = [m for m in known if summary.get(m)]
 
     blob = {
         "months": months, "models": models, "labels": labels,

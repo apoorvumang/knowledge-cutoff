@@ -75,7 +75,15 @@ kc score --graded graded/grok-4__direct.jsonl # per-month curve + cutoff estimat
 ```
 
 `--probe direct` asks an open question graded by an LLM judge (default judge:
-`claude-opus-4-8`, given the ground truth so its own cutoff is irrelevant).
+`judge-opus-4-8`, given the ground truth so its own cutoff is irrelevant).
+
+The judge is routed over **OpenRouter** (`anthropic/claude-opus-4.8`) so grading
+needs only `OPENROUTER_API_KEY`, not a separate Anthropic balance. It is the same
+underlying model as the native `claude-opus-4-8` entry, so grades stay comparable
+with runs graded before the switch. Keep it that way: swapping the judge for a
+different *model* would require re-grading every run to keep the leaderboard
+self-consistent. (`claude-opus-4-8` stays on the native Anthropic route because it
+is also a benchmark *subject*, and subjects are measured on their vendor's API.)
 `--probe mcq` is a 4-way forced choice graded deterministically by letter.
 Run both: `direct` under-counts (the model knows but doesn't volunteer), `mcq`
 over-counts (guessing), so they bracket the truth.
@@ -97,4 +105,40 @@ documented in `kc/schema.py`. To add events, append lines and run `kc validate`.
 
 Add an entry under `models:` in `models.yaml`. Any OpenAI-compatible endpoint
 works via a `kind: openai` provider block (set `base_url` + `api_key_env`);
-Anthropic models use `kind: anthropic`.
+Anthropic models use `kind: anthropic`. Pin dated revisions (`…-0731`) rather
+than floating aliases — a re-post-trained build can move the knowledge horizon,
+so the run needs to say which one it measured.
+
+To surface the model in the explorer, also add it to `MODEL_META` in
+`scripts/export_viz.py` (display name + **advertised** cutoff, sourced from
+official provider docs — use `not published` rather than an unattributed
+secondary figure) and to `MC` / `MODEL_PROV` in `report_template.html`. A
+provider logo is picked up automatically from `assets/logos/<provider>.svg`;
+without one the badge falls back to the provider's initial.
+
+Note the categorical palette is full at ~12 series: no sRGB color clears the
+ΔE 15 normal-vision floor against the existing set (the ceiling is 14.8). Past
+that, series identity rests on the legend, badge and tooltip rather than hue —
+prefer faceting or a smaller default selection over a 16th color.
+
+### Data hygiene
+
+Runs are resumable by `event_id`, so a row that errored or came back blank is
+otherwise cached as "done" forever. Two flags handle that:
+
+```bash
+kc eval --model <key> --probe mcq --retry-failed --max-tokens 4096
+```
+
+* `--retry-failed` drops rows that errored or returned blank/truncated output
+  (`finish_reason: length`) and re-queries them.
+* `--max-tokens` raises the per-call budget (default 2048). Reasoning models can
+  spend the whole budget before emitting an answer.
+
+Anything that couldn't be graded — an API error, a truncated completion, or a
+judge that errored — is labelled **`ungraded`**, never `abstain`. An abstention
+is a real model behaviour; ungraded is missing data. Scoring drops ungraded rows
+from every denominator and prints a warning, and `export_viz.py` refuses to
+publish a probe with >5% ungraded rows. (Without this, a judge whose API credit
+ran out silently renders *every* model as 100% abstain, which looks like a
+finding rather than an outage.)

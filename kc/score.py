@@ -49,6 +49,12 @@ def summarize(graded_path: str, threshold: float = 0.5) -> dict:
         lambda: {"correct": 0, "incorrect": 0, "abstain": 0, "n": 0})
     controls = {"alive_correct": 0, "alive_n": 0, "fake_confirmed": 0, "fake_n": 0}
 
+    # Rows that could not be graded are missing data, not abstentions: they are
+    # dropped from every denominator and counted separately so a broken judge or a
+    # truncating model shows up as "ungraded", not as a model that knows nothing.
+    ungraded = sum(1 for r in rows if r.get("label") == "ungraded")
+    rows = [r for r in rows if r.get("label") != "ungraded"]
+
     for r in rows:
         cat = r.get("category")
         label = r.get("label", "abstain")
@@ -102,6 +108,7 @@ def summarize(graded_path: str, threshold: float = 0.5) -> dict:
         "crossover": crossover,
         "controls": controls,
         "n_events": sum(c["n"] for c in curve),
+        "ungraded": ungraded,
     }
 
 
@@ -110,6 +117,10 @@ def format_report(summary: dict, title: str = "") -> str:
     if title:
         lines.append(f"# {title}")
     thr = summary["threshold"]
+    ung = summary.get("ungraded", 0)
+    if ung:
+        lines.append(f"!! {ung} row(s) UNGRADED (judge error / truncated response) -- "
+                     f"excluded from all rates below; re-grade before trusting this run")
     lines.append(f"month     n   known  wrong  abstain   curve (known_rate, thr={thr})")
     lines.append("-" * 72)
     for c in summary["curve"]:

@@ -72,3 +72,19 @@ models:
   deepseek-v4-pro:      { provider: openrouter, model_id: "deepseek/deepseek-v4-pro" }
   llama-3.3-70b:        { provider: together, model_id: "meta-llama/Llama-3.3-70B-Instruct-Turbo" }
   deepseek-v3:          { provider: fireworks, model_id: "accounts/fireworks/models/deepseek-v3" }
+  # Pinned to the dated revision, not the floating alias: re-post-trained
+  # revisions can shift the knowledge horizon, so the run must name which one.
+  deepseek-v4-flash-0731: { provider: openrouter, model_id: "deepseek/deepseek-v4-flash-0731" }
+  # --- Meta Superintelligence Labs (Muse), via OpenRouter ---
+  muse-spark-1.2:       { provider: openrouter, model_id: "meta/muse-spark-1.2" }
+  muse-glimmer-30b:     { provider: openrouter, model_id: "meta/muse-glimmer-30b" }
+  # --- Alibaba Qwen / Thinking Machines, via OpenRouter ---
+  qwen3.8-max:          { provider: openrouter, model_id: "qwen/qwen3.8-max" }
+  inkling:              { provider: openrouter, model_id: "thinkingmachines/inkling" }
+
+# The judge, routed through OpenRouter rather than the Anthropic API directly.
+# Same underlying model as the native `claude-opus-4-8` entry above, so grades stay
+# comparable with runs graded before the switch -- only the billing path differs.
+# `claude-opus-4-8` is kept on the native route because it is also a *subject* of
+# the benchmark, and a subject should be measured on its vendor's own API.
+  judge-opus-4-8:       { provider: openrouter, model_id: "anthropic/claude-opus-4.8" }

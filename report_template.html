@@ -60,6 +60,8 @@
   .chip-dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none;}
   .pbadge{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex:none;background:#fff;box-shadow:inset 0 0 0 1px rgba(128,128,128,.28);padding:2.5px;}
   .plogo{width:100%;height:100%;object-fit:contain;display:block;}
+  /* fallback when a vendor SVG isn't in assets/logos yet: initial on the white chip */
+  .pinitial{font:600 11px/1 ui-sans-serif,system-ui,sans-serif;color:#333;display:block;}
   .lb .eff{font-family:var(--mono);font-weight:600;color:var(--accent);}
   .lb .gapneg{color:var(--bad);font-family:var(--mono);font-size:12px;}
   .lb .ctl{font-family:var(--mono);font-size:12px;color:var(--muted);}
@@ -86,6 +88,9 @@
   .heat td{width:26px;height:26px;border-radius:4px;cursor:pointer;position:relative;}
   .heat td:hover{outline:2px solid var(--ink);outline-offset:-1px;}
   .heat td.claimed{box-shadow:inset 0 0 0 2.5px var(--accent), inset 0 0 0 3.5px rgba(0,0,0,.22);z-index:1;}
+  /* probe not measured / withheld: faint hatch, readable as "absent" not "zero" */
+  .heat td.nodata{background:repeating-linear-gradient(45deg,var(--panel-3) 0 3px,transparent 3px 6px);
+    box-shadow:inset 0 0 0 1px var(--hair);cursor:default;}
   .heat th.row .rl{display:inline-flex;align-items:center;gap:7px;justify-content:flex-end;}
   .claimed-key{display:inline-block;width:15px;height:15px;border-radius:3px;background:var(--panel-3);box-shadow:inset 0 0 0 2.5px var(--accent);vertical-align:-3px;}
   .heat .hcap{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;align-items:center;gap:8px;margin-top:10px;}
@@ -132,7 +137,7 @@
 <div class="wrap">
   <p class="eyebrow">Knowledge-Cutoff Benchmark · Explorer</p>
   <h1>How up-to-date is each AI model?</h1>
-  <p class="lede"><b>12 models</b> were each probed on <b>330 surprising, unforecastable events</b> spanning 30 months (Jan 2024 – Jun 2026). Below: a month-by-month heatmap with each model's <b>claimed</b> cutoff ringed, a leaderboard of where knowledge actually collapses (its <b>effective cutoff</b>), and — for every single event — <b>the exact answer each model gave</b>. Pick an event and read them yourself.</p>
+  <p class="lede"><b>__NMODELS__ models</b> were each probed on <b>330 surprising, unforecastable events</b> spanning 30 months (Jan 2024 – Jun 2026). Below: a month-by-month heatmap with each model's <b>claimed</b> cutoff ringed, a leaderboard of where knowledge actually collapses (its <b>effective cutoff</b>), and — for every single event — <b>the exact answer each model gave</b>. Pick an event and read them yourself.</p>
 
   <div class="toplinks">
     <a href="https://github.com/apoorvumang/knowledge-cutoff"><span class="ic">↗</span>Code on GitHub</a>
@@ -186,7 +191,7 @@
     <a href="https://github.com/apoorvumang/knowledge-cutoff">code on GitHub</a> · <a href="https://huggingface.co/datasets/apoorvumang/knowledge-cutoff-benchmark">dataset on HuggingFace</a><br>
     direct = open question graded correct / wrong / abstain by an LLM judge holding the ground truth · mcq = 4-way forced choice (chance ≈ 25%)<br>
     effective cutoff = last month above 50% correct that stays gone afterward · controls: living people (should be "alive") + fabricated events (should be denied)<br>
-    330 events · 12 models · Jan 2024 – Jun 2026 · surprising / unforecastable only · balanced US / international
+    330 events · __NMODELS__ models · Jan 2024 – Jun 2026 · surprising / unforecastable only · balanced US / international
   </footer>
 </div>
 
@@ -197,7 +202,21 @@ const MC = {  // per-model series colors (work on both themes)
   "claude-fable-5":"#12897A","gpt-5.6-sol":"#7A5AF0","grok-4.5":"#2E7DD6",
   "gemini-3.5-flash":"#C64B8C","gemini-3.1-pro":"#8E3BB0","claude-opus-4-8":"#E07B39",
   "claude-sonnet-5":"#5FA83D","gpt-4o":"#8A94A6","glm-5.2":"#D1495B","deepseek-v4-pro":"#2C6E63",
-  "gpt-5.5":"#C026D3","gpt-5.4":"#4F46E5"};
+  "gpt-5.5":"#C026D3","gpt-5.4":"#4F46E5",
+  // Added at 13-15 series. NOTE: the categorical space is exhausted at this count --
+  // no sRGB color reaches ΔE 15 (normal vision) against the 12 above; the ceiling is
+  // 14.8. These three are the optimum under that limit: ΔE >=11.5 from every color
+  // above, 14.5 from each other, and passing lightness/chroma/3:1-contrast in BOTH
+  // themes. Series identity therefore leans on the legend, provider badge and hover
+  // tooltip, not hue alone. Do not add a 16th series color -- facet instead.
+  "muse-spark-1.2":"#F434BE","muse-glimmer-30b":"#A18517",
+  "deepseek-v4-flash-0731":"#9E502E",
+  // 16-17. Separation is now spent: the best any further color can manage against
+  // the set above is ΔE 10.3 (normal vision), and these two sit ~9-10 from their
+  // nearest neighbours -- qwen3.8-max reads close to gpt-5.5, inkling close to
+  // sonnet-5. The curve chart is no longer readable by hue alone at this count;
+  // toggle to a handful of models to compare them. Facet before adding an 18th.
+  "qwen3.8-max":"#9A0DF2","inkling":"#298E29"};
 const mcol = m => MC[m] || "#8A94A6";
 
 // Provider identity: real brand logos (embedded as base64 data: URIs at build
@@ -206,18 +225,25 @@ const LOGOS = __LOGOS__;
 const PROV = {
   anthropic:{name:"Anthropic"}, openai:{name:"OpenAI"}, google:{name:"Google Gemini"},
   xai:{name:"xAI"}, deepseek:{name:"DeepSeek"}, zhipu:{name:"Zhipu · Z.ai (GLM)"},
+  // No assets/logos/meta.svg yet, so this one renders the initial-letter fallback.
+  // Drop the official SVG in that directory and the build picks it up automatically.
+  meta:{name:"Meta Superintelligence Labs"},
+  qwen:{name:"Alibaba Qwen"}, thinkingmachines:{name:"Thinking Machines Lab"},
 };
 const MODEL_PROV = {
   "claude-fable-5":"anthropic","claude-opus-4-8":"anthropic","claude-sonnet-5":"anthropic",
   "gpt-5.6-sol":"openai","gpt-5.5":"openai","gpt-5.4":"openai","gpt-4o":"openai",
   "grok-4.5":"xai","gemini-3.5-flash":"google","gemini-3.1-pro":"google",
   "glm-5.2":"zhipu","deepseek-v4-pro":"deepseek",
+  "deepseek-v4-flash-0731":"deepseek",
+  "muse-spark-1.2":"meta","muse-glimmer-30b":"meta",
+  "qwen3.8-max":"qwen","inkling":"thinkingmachines",
 };
 function makeBadge(pk){
   const p=PROV[pk]||{name:pk}; const src=LOGOS[pk];
   return src
     ? `<span class="pbadge" title="${p.name}"><img class="plogo" src="${src}" alt="${p.name}"></span>`
-    : `<span class="pbadge" title="${p.name}"></span>`;
+    : `<span class="pbadge" title="${p.name}"><span class="pinitial">${(p.name||"?").charAt(0)}</span></span>`;
 }
 const badge = m => makeBadge(MODEL_PROV[m]||"");
 // index (in months[]) of a model's advertised cutoff, or -1 if none/out of range
@@ -278,23 +304,37 @@ function gapCell(adv, eff){
 function renderLeaderboard(){
   const rows = DATA.models.map(m=>{
     const s=DATA.summary[m]||{}, d=s.direct, q=s.mcq;
-    return {m, d, q, eff:d?d.cutoff:null};
-  }).sort((a,b)=> monthIndex(b.eff)-monthIndex(a.eff));
+    // `measured` separates "the direct probe ran and found nothing this early"
+    // (eff === null, a real result) from "the direct probe has no publishable
+    // grades" (nothing measured). Without it, an unmeasured model renders as
+    // "before Jan '24" with the largest gap in the table and sorts to the top --
+    // a fabricated worst-offender.
+    return {m, d, q, eff:d?d.cutoff:null, measured:!!d};
+  }).sort((a,b)=> (a.measured===b.measured)
+      ? monthIndex(b.eff)-monthIndex(a.eff)
+      : (a.measured?-1:1));   // unmeasured rows sink to the bottom
   const body=document.getElementById("lb-body"); body.innerHTML="";
-  rows.forEach(({m,d,q,eff})=>{
+  rows.forEach(({m,d,q,eff,measured})=>{
     const lab=DATA.labels[m], adv=lab.advertised;
     const ctl = (s,key)=>{ const c=(s&&s.controls)||{}; return key==="alive"
       ? `${c.alive_correct||0}/${c.alive_n||0}` : `${c.fake_confirmed||0}/${c.fake_n||0}`; };
-    const aliveMiss = d&&d.controls&&d.controls.alive_correct<d.controls.alive_n;
-    const fakeBad = d&&d.controls&&d.controls.fake_confirmed>0;
+    const cs = d||q;   // controls from whichever probe published
+    const aliveMiss = cs&&cs.controls&&cs.controls.alive_correct<cs.controls.alive_n;
+    const fakeBad = cs&&cs.controls&&cs.controls.fake_confirmed>0;
+    // Not measured on the direct probe: state that, and show the mcq figure only as
+    // a clearly-labelled upper bound (mcq over-counts via guessing, so it is not
+    // comparable with the direct column and never fills the gap cell).
+    const effCell = measured ? displayEff(eff)
+      : `<span class="ctl" title="the direct probe has no publishable grades for this model">not measured</span>`
+        + (q&&q.cutoff?` <span class="ctl">(mcq ≤ ${displayEff(q.cutoff)})</span>`:"");
     const tr=document.createElement("tr");
     tr.innerHTML=`
       <td><span class="mname">${badge(m)}${lab.name}</span></td>
       <td class="ctl">${adv}</td>
-      <td class="eff">${displayEff(eff)}</td>
-      <td>${gapCell(adv, eff)}</td>
-      <td class="ctl ${aliveMiss?'warn':''}">${ctl(d,"alive")}</td>
-      <td class="ctl ${fakeBad?'warn':''}">${ctl(d,"fake")}</td>`;
+      <td class="eff">${effCell}</td>
+      <td>${measured?gapCell(adv, eff):'<span class="ctl">—</span>'}</td>
+      <td class="ctl ${aliveMiss?'warn':''}">${ctl(cs,"alive")}</td>
+      <td class="ctl ${fakeBad?'warn':''}">${ctl(cs,"fake")}</td>`;
     body.appendChild(tr);
   });
 }
@@ -367,8 +407,16 @@ function renderHeatmap(){
     const s=DATA.summary[m]&&DATA.summary[m][state.probe];
     const ci=advIndex(m);
     const cells=months.map((mo,i)=>{
-      const k=s?s.curve[i].k:0, n=s?s.curve[i].n:0;
       const claimed=(i===ci);
+      // No data for this probe (e.g. ungraded, so withheld) must NOT paint as 0% --
+      // the red end of the scale means "measured, knew nothing", which is a claim
+      // we haven't earned. Render it as an explicit blank instead.
+      if(!s){
+        const t=`${DATA.labels[m].name} · ${fmtMonth(mo)} · no data for the ${state.probe} probe`;
+        return `<td class="nodata ${claimed?'claimed':''}" title="${t}"
+          data-m="${m}" data-mo="${mo}"></td>`;
+      }
+      const k=s.curve[i].k, n=s.curve[i].n;
       const t=`${DATA.labels[m].name} · ${fmtMonth(mo)} · ${Math.round(k*100)}% (n=${n})`
         + (claimed?` · CLAIMED cutoff (${DATA.labels[m].advertised})`:"");
       return `<td class="${claimed?'claimed':''}" title="${t}"

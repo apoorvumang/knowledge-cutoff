@@ -53,7 +53,8 @@ def cmd_run(args):
     raw, _ = _paths(args.model, args.probe)
     out = args.out or raw
     run_model(args.model, args.events, args.probe, out,
-              concurrency=args.concurrency, limit=args.limit)
+              concurrency=args.concurrency, limit=args.limit,
+              max_tokens=args.max_tokens, retry_failed=args.retry_failed)
     print(f"wrote {out}")
 
 
@@ -77,7 +78,8 @@ def cmd_eval(args):
     from .score import summarize, format_report
     raw, graded = _paths(args.model, args.probe)
     run_model(args.model, args.events, args.probe, raw,
-              concurrency=args.concurrency, limit=args.limit)
+              concurrency=args.concurrency, limit=args.limit,
+              max_tokens=args.max_tokens, retry_failed=args.retry_failed)
     grade_run(raw, args.events, graded, judge_key=args.judge,
               concurrency=args.concurrency)
     summary = summarize(graded, threshold=args.threshold)
@@ -101,12 +103,18 @@ def main(argv=None):
     sp.add_argument("--out")
     sp.add_argument("--concurrency", type=int, default=8)
     sp.add_argument("--limit", type=int)
+    sp.add_argument("--max-tokens", type=int,
+                    help="override the per-call token budget (default 2048); raise it "
+                         "for reasoning models that truncate before answering")
+    sp.add_argument("--retry-failed", action="store_true",
+                    help="drop rows that errored or came back blank/truncated and "
+                         "re-query them instead of treating them as done")
     sp.set_defaults(func=cmd_run)
 
     sp = sub.add_parser("grade")
     sp.add_argument("--run", required=True)
     sp.add_argument("--out")
-    sp.add_argument("--judge", default="claude-opus-4-8")
+    sp.add_argument("--judge", default="judge-opus-4-8")
     sp.add_argument("--concurrency", type=int, default=8)
     sp.set_defaults(func=cmd_grade)
 
@@ -118,10 +126,14 @@ def main(argv=None):
     sp = sub.add_parser("eval")
     sp.add_argument("--model", required=True)
     sp.add_argument("--probe", choices=["direct", "mcq"], default="direct")
-    sp.add_argument("--judge", default="claude-opus-4-8")
+    sp.add_argument("--judge", default="judge-opus-4-8")
     sp.add_argument("--concurrency", type=int, default=8)
     sp.add_argument("--limit", type=int)
     sp.add_argument("--threshold", type=float, default=0.5)
+    sp.add_argument("--max-tokens", type=int,
+                    help="override the per-call token budget (default 2048)")
+    sp.add_argument("--retry-failed", action="store_true",
+                    help="re-query rows that errored or came back blank/truncated")
     sp.set_defaults(func=cmd_eval)
 
     args = p.parse_args(argv)

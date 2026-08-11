@@ -55,12 +55,20 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #     is limited to information available as of its training cutoff."
 #   Kimi K3 -> no official cutoff published; absent from the HF model card
 #     (huggingface.co/moonshotai/Kimi-K3) and the public technical report.
+#   Gemini 3.6 Flash -> Mar 2026, per the DeepMind model card, which hedges it:
+#     "The knowledge cutoff date for Gemini 3.6 Flash is March 2026 - users can expect
+#     updated information for some domains while in others they may experience the
+#     model's knowledge is limited to January 2025". Only the headline figure is
+#     recorded here; the caveat is the sort of claim this benchmark exists to test, so
+#     it should be read off the measured curve rather than encoded as the advertised
+#     value.
 MODEL_META = [
     ("claude-fable-5", "Claude Fable 5", "Jan 2026"),
     ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
     ("gpt-5.5", "GPT-5.5", "Dec 2025"),
     ("gpt-5.4", "GPT-5.4", "Aug 2025"),
     ("grok-4.5", "Grok 4.5", "not published"),
+    ("gemini-3.6-flash", "Gemini 3.6 Flash", "Mar 2026"),
     ("gemini-3.5-flash", "Gemini 3.5 Flash", "Jan 2025"),
     ("gemini-3.1-pro", "Gemini 3.1 Pro", "Jan 2025"),
     ("claude-opus-4-8", "Claude Opus 4.8", "Jan 2026"),

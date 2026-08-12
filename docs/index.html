@@ -61,7 +61,10 @@
   .pbadge{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;flex:none;background:#fff;box-shadow:inset 0 0 0 1px rgba(128,128,128,.28);padding:2.5px;}
   .plogo{width:100%;height:100%;object-fit:contain;display:block;}
   /* fallback when a vendor SVG isn't in assets/logos yet: initial on the white chip */
-  .pinitial{font:600 11px/1 ui-sans-serif,system-ui,sans-serif;color:#333;display:block;}
+  /* Two letters, not one: "Meta Superintelligence Labs" and "Moonshot AI" both start
+     with M, so a single initial makes them the same badge. */
+  .pinitial{font:600 8px/1 ui-sans-serif,system-ui,sans-serif;color:#333;display:block;
+    letter-spacing:-.02em;text-transform:none;}
   .lb .eff{font-family:var(--mono);font-weight:600;color:var(--accent);}
   .lb .gapneg{color:var(--bad);font-family:var(--mono);font-size:12px;}
   .lb .ctl{font-family:var(--mono);font-size:12px;color:var(--muted);}
@@ -87,7 +90,13 @@
   .heat th.row{text-align:right;color:var(--ink);font-family:var(--sans);font-size:12px;font-weight:600;}
   .heat td{width:26px;height:26px;border-radius:4px;cursor:pointer;position:relative;}
   .heat td:hover{outline:2px solid var(--ink);outline-offset:-1px;}
-  .heat td.claimed{box-shadow:inset 0 0 0 2.5px var(--accent), inset 0 0 0 3.5px rgba(0,0,0,.22);z-index:1;}
+  /* Claimed-cutoff marker. It must read on EVERY cell background, and the heat scale
+     itself runs red -> amber -> green, so an amber ring (the old --accent) sat inside
+     the very scale it annotates: 1.12:1 against green, 1.34:1 against red. No single
+     colour clears it (white bottoms out at 1.16 on pale amber, near-black at 1.26 on
+     the dark no-data cell). A two-tone ring does: dark band outside, white band
+     inside, so whichever loses contrast the other holds it. Worst case 4.78:1. */
+  .heat td.claimed{box-shadow:inset 0 0 0 2px #0B0D12, inset 0 0 0 4px #FFFFFF;z-index:2;}
   /* show/hide controls above the heatmap */
   .hctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-family:var(--mono);font-size:11.5px;
     color:var(--faint);margin-bottom:10px;}
@@ -103,8 +112,14 @@
   /* probe not measured / withheld: faint hatch, readable as "absent" not "zero" */
   .heat td.nodata{background:repeating-linear-gradient(45deg,var(--panel-3) 0 3px,transparent 3px 6px);
     box-shadow:inset 0 0 0 1px var(--hair);cursor:default;}
+  /* .nodata and .claimed have equal specificity and both set box-shadow, so a cell that
+     is BOTH (no data for this probe, and the month the vendor claims) would silently
+     lose its ring to whichever rule comes last. Restate it so the marker always wins. */
+  .heat td.nodata.claimed{box-shadow:inset 0 0 0 2px #0B0D12, inset 0 0 0 4px #FFFFFF;}
   .heat th.row .rl{display:inline-flex;align-items:center;gap:7px;justify-content:flex-end;}
-  .claimed-key{display:inline-block;width:15px;height:15px;border-radius:3px;background:var(--panel-3);box-shadow:inset 0 0 0 2.5px var(--accent);vertical-align:-3px;}
+  /* legend swatch: same two-tone ring as the cell, so the key matches what's drawn */
+  .claimed-key{display:inline-block;width:16px;height:16px;border-radius:3px;background:var(--panel-3);
+    box-shadow:inset 0 0 0 2px #0B0D12, inset 0 0 0 4px #FFFFFF;vertical-align:-3px;}
   .heat .hcap{font-family:var(--mono);font-size:11px;color:var(--faint);display:flex;align-items:center;gap:8px;margin-top:10px;}
   .heat .scale{display:inline-flex;height:10px;width:120px;border-radius:3px;background:linear-gradient(90deg,var(--bad),#E7C14B,var(--good));}
 
@@ -158,7 +173,7 @@
 
   <div class="section">
     <div class="section-label"><span>Heatmap · correctness by month</span>
-      <span class="hint">amber ring = the model's <em>claimed</em> cutoff · click any cell to read those answers</span>
+      <span class="hint">outlined cell = the model's <em>claimed</em> cutoff · click any cell to read those answers</span>
       <span class="probe-toggle"></span></div>
     <div class="heat">
       <div id="heat-controls" class="hctl"></div>
@@ -246,7 +261,8 @@ const PROV = {
   // No assets/logos/meta.svg yet, so this one renders the initial-letter fallback.
   // Drop the official SVG in that directory and the build picks it up automatically.
   meta:{name:"Meta Superintelligence Labs"},
-  qwen:{name:"Alibaba Qwen"}, thinkingmachines:{name:"Thinking Machines Lab"},
+  // named Qwen-first so the initial-letter fallback reads "Qw", not "Al" (which scans as "AI")
+  qwen:{name:"Qwen · Alibaba"}, thinkingmachines:{name:"Thinking Machines Lab"},
   moonshot:{name:"Moonshot AI"},
 };
 const MODEL_PROV = {
@@ -262,7 +278,7 @@ function makeBadge(pk){
   const p=PROV[pk]||{name:pk}; const src=LOGOS[pk];
   return src
     ? `<span class="pbadge" title="${p.name}"><img class="plogo" src="${src}" alt="${p.name}"></span>`
-    : `<span class="pbadge" title="${p.name}"><span class="pinitial">${(p.name||"?").charAt(0)}</span></span>`;
+    : `<span class="pbadge" title="${p.name}"><span class="pinitial">${(p.name||"?").slice(0,2)}</span></span>`;
 }
 const badge = m => makeBadge(MODEL_PROV[m]||"");
 // index (in months[]) of a model's advertised cutoff, or -1 if none/out of range

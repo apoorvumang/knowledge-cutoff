@@ -61,6 +61,7 @@ models:
   gpt-5:                { provider: openai, model_id: gpt-5 }
   gpt-4o:               { provider: openai, model_id: gpt-4o }
   # --- xAI ---
+  grok-4.6:             { provider: xai, model_id: grok-4.6 }
   grok-4.5:             { provider: xai, model_id: grok-4.5 }
   grok-4:               { provider: xai, model_id: grok-4 }
   # --- Google ---
@@ -71,6 +72,7 @@ models:
   # --- open-weights / Chinese frontier via OpenRouter ---
   glm-5.2:              { provider: openrouter, model_id: "z-ai/glm-5.2" }
   deepseek-v4-pro:      { provider: openrouter, model_id: "deepseek/deepseek-v4-pro" }
+  deepseek-v4-pro-0813: { provider: openrouter, model_id: "deepseek/deepseek-v4-pro-0813" }
   llama-3.3-70b:        { provider: together, model_id: "meta-llama/Llama-3.3-70B-Instruct-Turbo" }
   deepseek-v3:          { provider: fireworks, model_id: "accounts/fireworks/models/deepseek-v3" }
   # Pinned to the dated revision, not the floating alias: re-post-trained

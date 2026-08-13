@@ -46,6 +46,16 @@ class Registry:
 def load_registry(path: str = "models.yaml") -> Registry:
     with open(path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
+    # Optional overlay for models that must not live in a public repo: internal
+    # endpoints, unreleased checkpoints, private finetunes. Point KC_REGISTRY_EXTRA at
+    # a second YAML with the same shape; its providers/models are merged over this
+    # one. Keep that file out of git (see .gitignore).
+    extra_path = os.environ.get("KC_REGISTRY_EXTRA")
+    if extra_path and os.path.exists(extra_path):
+        with open(extra_path, encoding="utf-8") as f:
+            extra = yaml.safe_load(f) or {}
+        cfg["providers"] = {**cfg.get("providers", {}), **(extra.get("providers") or {})}
+        cfg["models"] = {**cfg.get("models", {}), **(extra.get("models") or {})}
     providers = cfg["providers"]
     models: dict[str, ModelSpec] = {}
     for key, m in cfg["models"].items():

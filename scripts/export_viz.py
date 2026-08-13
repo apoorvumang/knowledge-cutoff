@@ -40,6 +40,10 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #   GPT-4o -> Oct 2023 (OpenAI model page)
 #   Gemini 3.5 Flash / 3.1 Pro -> Jan 2025 (Gemini API docs + DeepMind model card)
 #   Grok 4.5 -> no official cutoff published by xAI (the "Dec 2025" figure is Grok 4.3)
+#   Grok 4.6 -> Jan 2026, stated in the official model card (media.x.ai, rev 2026-08-12,
+#     §1.2): "Grok 4.6 has a pretraining cutoff of January 2026." The "February 1, 2026"
+#     figure in secondary write-ups does not appear in the card. First xAI model here to
+#     publish a cutoff at all.
 #   GLM-5.2, DeepSeek-V4-Pro -> no official cutoff published (secondary figures unattributed)
 #   Muse Glimmer 30B -> Jan 2026, stated verbatim on the official HF model card
 #     ("Knowledge cutoff: January 4, 2026"), huggingface.co/meta-models/Muse-Glimmer-30B
@@ -67,6 +71,7 @@ MODEL_META = [
     ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
     ("gpt-5.5", "GPT-5.5", "Dec 2025"),
     ("gpt-5.4", "GPT-5.4", "Aug 2025"),
+    ("grok-4.6", "Grok 4.6", "Jan 2026"),
     ("grok-4.5", "Grok 4.5", "not published"),
     ("gemini-3.6-flash", "Gemini 3.6 Flash", "Mar 2026"),
     ("gemini-3.5-flash", "Gemini 3.5 Flash", "Jan 2025"),

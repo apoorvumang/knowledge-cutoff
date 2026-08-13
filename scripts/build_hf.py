@@ -15,8 +15,17 @@ import glob
 import json
 import os
 import shutil
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from export_viz import MODEL_META  # noqa: E402  (the published-model allowlist)
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# graded/ is a local working directory and may hold runs that must NOT be published:
+# internal endpoints, unreleased checkpoints, private finetunes. Publish only models
+# explicitly listed in MODEL_META, so appearing in the dataset is opt-in rather than a
+# side effect of having been evaluated.
+PUBLISHABLE = {m for m, _, _ in MODEL_META}
 OUT = os.path.join(HERE, "hf_dataset")
 LABEL = {"c": "correct", "w": "incorrect", "a": "abstain"}  # from graded codes
 FULL = {"correct": "correct", "incorrect": "incorrect", "abstain": "abstain"}
@@ -38,9 +47,13 @@ def main() -> None:
     # results.jsonl — flatten graded/*.jsonl
     rows = []
     n_ungraded = 0
+    withheld = set()
     for g in sorted(glob.glob(os.path.join(HERE, "graded", "*.jsonl"))):
         base = os.path.basename(g)[:-6]
         model, probe = base.rsplit("__", 1)
+        if model not in PUBLISHABLE:
+            withheld.add(model)
+            continue
         with open(g, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
@@ -79,6 +92,8 @@ def main() -> None:
           f"{len(models)} models")
     if n_ungraded:
         print(f"  dropped {n_ungraded} ungraded row(s) (not results — re-grade to include)")
+    if withheld:
+        print(f"  WITHHELD (not in MODEL_META, so not published): {', '.join(sorted(withheld))}")
     print("  models:", ", ".join(models))
 
 

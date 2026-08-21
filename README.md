@@ -121,6 +121,34 @@ Note the categorical palette is full at ~12 series: no sRGB color clears the
 that, series identity rests on the legend, badge and tooltip rather than hue —
 prefer faceting or a smaller default selection over a 16th color.
 
+### Sampling
+
+Every model is sampled **greedily** (`temperature 0`) by default. That is deliberate:
+the question is whether the model *knows* a fact, and greedy decoding returns its
+single most likely answer. Sampling at a vendor's recommended temperature injects
+randomness that can make a model name the wrong person on an event it actually knows,
+which shows up as an earlier effective cutoff — the benchmark would understate
+knowledge rather than measure it. It also keeps every row comparable.
+
+Where a vendor's card recommends otherwise and you want to honour it, put the settings
+on the model in `models.yaml`:
+
+```yaml
+  qwen3.8-27b:
+    provider: openrouter
+    model_id: "qwen/qwen3.8-27b"
+    params: { temperature: 0.7, top_p: 0.80, top_k: 20, presence_penalty: 1.5 }
+```
+
+`top_p`, `presence_penalty`, `frequency_penalty`, `seed` and `stop` are passed
+natively; anything else (`top_k`, `min_p`, `repetition_penalty`, …) is forwarded via
+`extra_body`. The effective settings are stamped into each run row under
+`meta.sampling`, so a run file always says how it was sampled.
+
+Bear in mind a row sampled differently from the rest is not strictly comparable with
+them. Prefer greedy for leaderboard rows; use overrides to *check* whether sampling
+changes a result, and say so if you publish one.
+
 ### Data hygiene
 
 Runs are resumable by `event_id`, so a row that errored or came back blank is

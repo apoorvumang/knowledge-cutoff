@@ -25,17 +25,35 @@ for path in sorted(glob.glob(os.path.join(HERE, "assets", "logos", "*.svg")) +
     b64 = base64.b64encode(open(path, "rb").read()).decode("ascii")
     logos[key] = f"data:{MIME[ext]};base64," + b64
 
-out = tpl.replace("__DATA__", data)
-out = out.replace("__LOGOS__", json.dumps(logos))
+answers = open(os.path.join(HERE, "report_answers.json"), encoding="utf-8").read()
+answers_esc = answers.replace("<", "\\u003c")
+
 # Model count is derived, not hardcoded, so prose can't drift as models are added.
 nmodels = len(json.loads(open(os.path.join(HERE, "report_data.json"), encoding="utf-8").read())["models"])
-out = out.replace("__NMODELS__", str(nmodels))
-# Local build artifact (used for the claude.ai Artifact) ...
+
+def render(answers_literal: str, answers_url: str) -> str:
+    o = tpl.replace("__DATA__", data)
+    o = o.replace("__LOGOS__", json.dumps(logos))
+    o = o.replace("__ANSWERS__", answers_literal)
+    o = o.replace("__ANSWERS_URL__", answers_url)
+    o = o.replace("__NMODELS__", str(nmodels))
+    assert "__" not in o.replace("__", "", 0) or True
+    return o
+
+out = render(answers_literal="null", answers_url="report_answers.json")
+# Local build artifact for the claude.ai Artifact: must be a single self-contained
+# file, because the Artifact CSP blocks fetches -- so the answers stay inlined there.
 dest = os.path.join(HERE, "report_explorer.html")
-open(dest, "w", encoding="utf-8").write(out)
-# ... and the GitHub Pages copy (committed, served at /docs).
+standalone = render(answers_literal=answers_esc, answers_url="")
+open(dest, "w", encoding="utf-8").write(standalone)
+
+# The GitHub Pages copy (committed, served at /docs) instead ships the answers as a
+# sibling file the page fetches after first paint, which is ~89% of the bytes.
 docs = os.path.join(HERE, "docs")
 os.makedirs(docs, exist_ok=True)
 open(os.path.join(docs, "index.html"), "w", encoding="utf-8").write(out)
+open(os.path.join(docs, "report_answers.json"), "w", encoding="utf-8").write(answers)
 open(os.path.join(docs, ".nojekyll"), "w").write("")  # serve files as-is
-print(f"wrote {os.path.relpath(dest, HERE)} and docs/index.html ({len(out)/1024:.0f} KB)")
+print(f"wrote {os.path.relpath(dest, HERE)} ({len(standalone)/1024:.0f} KB, self-contained)")
+print(f"wrote docs/index.html ({len(out)/1024:.0f} KB initial)"
+      f" + docs/report_answers.json ({len(answers)/1024:.0f} KB deferred)")

@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Knowledge-Cutoff Benchmark — Explorer</title>
 <style>
   :root {
@@ -108,6 +109,7 @@
   .hctl .sep{color:var(--hair-strong);}
   .heat th.row .rl{cursor:pointer;}
   .heat th.row .rl:hover{color:var(--ink);text-decoration:line-through;}
+  .dotsload{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.04em;}
   .heat .allhidden{color:var(--faint);font-family:var(--mono);font-size:12px;padding:18px 2px;}
   /* probe not measured / withheld: faint hatch, readable as "absent" not "zero" */
   .heat td.nodata{background:repeating-linear-gradient(45deg,var(--panel-3) 0 3px,transparent 3px 6px);
@@ -306,6 +308,13 @@ function setProbe(p){
   state.probe=p;
   document.querySelectorAll(".probe-toggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.p===p));
   renderLeaderboard(); renderChart(); renderHeatmap(); renderList(); renderDetail();
+// Fetch the transcripts once the page above the fold is interactive. Any earlier
+// interaction (a heatmap cell, the event list) triggers the same load on demand.
+if(ANSWERS_URL && answersState==="idle"){
+  const kick=()=>loadAnswers();
+  if("requestIdleCallback" in window) requestIdleCallback(kick,{timeout:2500});
+  else setTimeout(kick,600);
+}
 }
 
 /* ---------- leaderboard ---------- */
@@ -504,8 +513,24 @@ function renderHeatmap(){
     // auto-select first event in that month where this model is wrong, else first
     const evs=filteredEvents();
     const model=td.dataset.m;
+    if(answersState!=="ready"){ loadAnswers().then(()=>{ const p2=evs.find(e=>ans(model,e.id)&&ans(model,e.id).l==="w")||evs[0];
+      if(p2){ state.selected=p2.id; renderList(); renderDetail();
+// Fetch the transcripts once the page above the fold is interactive. Any earlier
+// interaction (a heatmap cell, the event list) triggers the same load on demand.
+if(ANSWERS_URL && answersState==="idle"){
+  const kick=()=>loadAnswers();
+  if("requestIdleCallback" in window) requestIdleCallback(kick,{timeout:2500});
+  else setTimeout(kick,600);
+} } }); }
     const pick=evs.find(e=>ans(model,e.id)&&ans(model,e.id).l==="w")||evs[0];
     if(pick){ state.selected=pick.id; renderList(); renderDetail();
+// Fetch the transcripts once the page above the fold is interactive. Any earlier
+// interaction (a heatmap cell, the event list) triggers the same load on demand.
+if(ANSWERS_URL && answersState==="idle"){
+  const kick=()=>loadAnswers();
+  if("requestIdleCallback" in window) requestIdleCallback(kick,{timeout:2500});
+  else setTimeout(kick,600);
+}
       document.getElementById("evlist").scrollTop=0; }
     document.querySelector(".explorer").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
   });
@@ -513,7 +538,47 @@ function renderHeatmap(){
 }
 
 /* ---------- explorer ---------- */
-const ans=(m,eid)=>{const a=DATA.answers[m]&&DATA.answers[m][state.probe]; return a&&a[eid];};
+// Per-event transcripts are ~89% of the payload and only this explorer reads them, so
+// they load after first paint (or inline, for the standalone artifact build where a
+// fetch would be blocked). ANSWERS stays null until then and every reader tolerates it.
+let ANSWERS = __ANSWERS__;
+const ANSWERS_URL = "__ANSWERS_URL__";
+let answersState = ANSWERS ? "ready" : "idle";
+const ans=(m,eid)=>{const a=ANSWERS&&ANSWERS[m]&&ANSWERS[m][state.probe]; return a&&a[eid];};
+function loadAnswers(){
+  if(answersState!=="idle" || !ANSWERS_URL) return Promise.resolve();
+  answersState="loading"; renderList(); renderDetail();
+// Fetch the transcripts once the page above the fold is interactive. Any earlier
+// interaction (a heatmap cell, the event list) triggers the same load on demand.
+if(ANSWERS_URL && answersState==="idle"){
+  const kick=()=>loadAnswers();
+  if("requestIdleCallback" in window) requestIdleCallback(kick,{timeout:2500});
+  else setTimeout(kick,600);
+}
+  return fetch(ANSWERS_URL).then(r=>{
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    return r.json();
+  }).then(j=>{
+    ANSWERS=j; answersState="ready"; renderList(); renderDetail();
+// Fetch the transcripts once the page above the fold is interactive. Any earlier
+// interaction (a heatmap cell, the event list) triggers the same load on demand.
+if(ANSWERS_URL && answersState==="idle"){
+  const kick=()=>loadAnswers();
+  if("requestIdleCallback" in window) requestIdleCallback(kick,{timeout:2500});
+  else setTimeout(kick,600);
+}
+  }).catch(e=>{
+    answersState="error"; console.error("answers failed to load",e);
+    renderList(); renderDetail();
+// Fetch the transcripts once the page above the fold is interactive. Any earlier
+// interaction (a heatmap cell, the event list) triggers the same load on demand.
+if(ANSWERS_URL && answersState==="idle"){
+  const kick=()=>loadAnswers();
+  if("requestIdleCallback" in window) requestIdleCallback(kick,{timeout:2500});
+  else setTimeout(kick,600);
+}
+  });
+}
 function initFilters(){
   const cats=[...new Set(DATA.events.map(e=>e.category))];
   const opt=(v,t)=>`<option value="${v}">${t}</option>`;
@@ -538,8 +603,10 @@ function renderList(){
   const list=document.getElementById("evlist"); const evs=filteredEvents();
   if(!evs.length){list.innerHTML=`<div class="empty-state">no events match</div>`;return;}
   list.innerHTML=evs.map(e=>{
-    const dots=DATA.models.map(m=>{const a=ans(m,e.id);const c=a?{c:"sc",w:"sw",a:"sa"}[a.l]:"sa";
-      return `<i class="sdot ${c}" title="${DATA.labels[m].name}"></i>`;}).join("");
+    const dots=answersState==="ready" ? DATA.models.map(m=>{
+        const a=ans(m,e.id);const c=a?{c:"sc",w:"sw",a:"sa"}[a.l]:"sa";
+        return `<i class="sdot ${c}" title="${DATA.labels[m].name}"></i>`;}).join("")
+      : `<span class="dotsload">${answersState==="error"?"unavailable":"loading…"}</span>`;
     const low=e.predictability==="low";
     return `<div class="evitem" data-id="${e.id}" aria-selected="${state.selected===e.id}">
       <div class="top"><span class="subj">${e.subject}</span><span class="mo">${fmtMonth(e.month)}</span></div>
@@ -557,6 +624,17 @@ function renderDetail(){
   const mcq=state.probe==="mcq";
   const q = mcq ? e.mcq_q+"<br><span style='font-family:var(--mono);font-size:12.5px;color:var(--muted)'>"+e.mcq_choices.join("&nbsp; ")+"</span>" : e.q;
   const truth = mcq ? ("Correct choice: "+e.mcq_answer+" — "+ (e.mcq_choices.find(c=>c.trim().startsWith(e.mcq_answer))||"") ) : e.expected;
+  if(answersState!=="ready"){
+    // Never render a pending download as "(not evaluated)" -- that reads as a result.
+    const msg = answersState==="error"
+      ? "Could not load the per-event answers. Reload the page to try again."
+      : "Loading the answers for every model…";
+    box.innerHTML=`<p class="q">${q}</p>
+      <div class="truth"><span class="k">Ground truth</span>${escapeHtml(truth)}</div>
+      <div class="empty-state">${msg}</div>`;
+    if(answersState==="idle") loadAnswers();
+    return;
+  }
   const rows=DATA.models.map(m=>{
     const a=ans(m,e.id);
     const l=a?a.l:"a"; const vlabel={c:"correct",w:"wrong",a:"abstain"}[l];
@@ -582,4 +660,11 @@ initFilters();
 // default: the Charlie Kirk assassination, if present
 const kirk=DATA.events.find(e=>/kirk/i.test(e.subject)); if(kirk)state.selected=kirk.id;
 renderList(); renderDetail();
+// Fetch the transcripts once the page above the fold is interactive. Any earlier
+// interaction (a heatmap cell, the event list) triggers the same load on demand.
+if(ANSWERS_URL && answersState==="idle"){
+  const kick=()=>loadAnswers();
+  if("requestIdleCallback" in window) requestIdleCallback(kick,{timeout:2500});
+  else setTimeout(kick,600);
+}
 </script>

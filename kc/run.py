@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import os
+import random
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
@@ -74,19 +76,41 @@ def _prune_unusable(out_path: str) -> int:
     return dropped
 
 
-def _one(model: Model, ev: Event, probe: str, max_tokens: int | None = None) -> dict:
+# Transient conditions worth waiting out rather than recording as a result. A rate
+# limit is the provider asking us to slow down; writing it into the run file as a
+# failed row means the event is either lost or has to be hunted down with
+# --retry-failed later.
+_RETRYABLE = ("ratelimit", "429", "timeout", "timedout", "apiconnection",
+              "internalserver", "500", "502", "503", "504", "overloaded")
+
+
+def _is_retryable(e: Exception) -> bool:
+    blob = f"{type(e).__name__} {e}".lower().replace(" ", "").replace("_", "")
+    return any(t in blob for t in _RETRYABLE)
+
+
+def _one(model: Model, ev: Event, probe: str, max_tokens: int | None = None,
+         attempts: int = 5) -> dict:
     if probe == "direct":
         system, user = build_direct_prompt(ev)
     elif probe == "mcq":
         system, user = build_mcq_prompt(ev)
     else:
         raise ValueError(f"unknown probe {probe!r}")
-    try:
-        kw = {"max_tokens": max_tokens} if max_tokens else {}
-        text, meta = model.complete(user, system, **kw)
-        err = None
-    except Exception as e:  # capture; a single failure shouldn't kill the run
-        text, meta, err = "", {}, f"{type(e).__name__}: {e}"
+    kw = {"max_tokens": max_tokens} if max_tokens else {}
+    text, meta, err = "", {}, None
+    for attempt in range(attempts):
+        try:
+            text, meta = model.complete(user, system, **kw)
+            err = None
+            break
+        except Exception as e:  # capture; a single failure shouldn't kill the run
+            err = f"{type(e).__name__}: {e}"
+            if attempt == attempts - 1 or not _is_retryable(e):
+                text, meta = "", {}
+                break
+            # exponential backoff with jitter, so parallel workers don't retry in step
+            time.sleep(min(30.0, 1.5 * (2 ** attempt)) * (0.6 + random.random() * 0.8))
     return {
         "event_id": ev.id,
         "month": ev.month,

@@ -23,12 +23,15 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
 from .providers import Model, get_model
+from .run import _is_retryable          # same transient-vs-permanent classification
 from .schema import Event, load_events
 
 LABELS = {"correct", "incorrect", "abstain"}
@@ -114,16 +117,25 @@ def grade_direct(row: dict, ev: Event, judge: Model) -> dict:
         # Includes finish_reason == "length": the model burned its budget before
         # answering. No answer was given, so there is nothing to grade.
         return {**_base(row, ev), "label": UNGRADED, "reason": "empty or truncated response"}
-    try:
-        text, _ = judge.complete(_judge_prompt(ev, row["response"]), JUDGE_SYSTEM,
-                                 max_tokens=300)
-        obj = _parse_json(text)
-        label = str(obj.get("label", "")).lower().strip()
-        reason = str(obj.get("reason", ""))[:300]
-        if label not in LABELS:
-            label, reason = UNGRADED, f"judge returned unusable label {label!r}"
-    except Exception as e:
-        label, reason = UNGRADED, f"judge error: {e}"[:300]
+    # The judge is rate-limited like any other endpoint. Without backoff a 429 becomes
+    # an ungraded row, which then has to be chased down with a re-grade -- so wait it
+    # out here instead. Permanent failures (bad key, exhausted quota) are not retried.
+    label = reason = None
+    for attempt in range(5):
+        try:
+            text, _ = judge.complete(_judge_prompt(ev, row["response"]), JUDGE_SYSTEM,
+                                     max_tokens=300)
+            obj = _parse_json(text)
+            label = str(obj.get("label", "")).lower().strip()
+            reason = str(obj.get("reason", ""))[:300]
+            if label not in LABELS:
+                label, reason = UNGRADED, f"judge returned unusable label {label!r}"
+            break
+        except Exception as e:
+            label, reason = UNGRADED, f"judge error: {e}"[:300]
+            if attempt == 4 or not _is_retryable(e):
+                break
+            time.sleep(min(30.0, 1.5 * (2 ** attempt)) * (0.6 + random.random() * 0.8))
     return {**_base(row, ev), "label": label, "reason": reason}
 
 

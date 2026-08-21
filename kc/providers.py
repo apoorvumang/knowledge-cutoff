@@ -32,6 +32,11 @@ class ModelSpec:
     model_id: str
     base_url: str | None
     api_key_env: str
+    # Optional per-model sampling overrides from models.yaml (`params:`). Vendors
+    # publish different recommended settings; this records them per model instead of
+    # hardcoding one global policy. Anything not natively accepted by the OpenAI
+    # schema (top_k, min_p, repetition_penalty, ...) is forwarded via extra_body.
+    params: dict[str, Any] | None = None
 
 
 class Registry:
@@ -68,6 +73,7 @@ def load_registry(path: str = "models.yaml") -> Registry:
             model_id=m["model_id"],
             base_url=p.get("base_url"),
             api_key_env=p["api_key_env"],
+            params=m.get("params") or None,
         )
     return Registry(providers, models)
 
@@ -102,14 +108,19 @@ class Model:
             raise RuntimeError(f"unknown provider kind {self.spec.provider_kind!r}")
 
     def complete(self, user: str, system: str = "", *,
-                 temperature: float = 0.0,
+                 temperature: float | None = None,
                  max_tokens: int = DEFAULT_MAX_TOKENS) -> tuple[str, dict]:
+        """Sampling policy: greedy (temperature 0) unless the model's registry entry
+        overrides it. An explicit temperature argument beats both."""
         self._ensure_client()
+        extra = dict(self.spec.params or {})
+        temp = temperature if temperature is not None else extra.pop("temperature", 0.0)
+        extra.pop("temperature", None)
         if self.spec.provider_kind == "anthropic":
-            return self._complete_anthropic(user, system, temperature, max_tokens)
-        return self._complete_openai(user, system, temperature, max_tokens)
+            return self._complete_anthropic(user, system, temp, max_tokens, extra)
+        return self._complete_openai(user, system, temp, max_tokens, extra)
 
-    def _complete_anthropic(self, user, system, temperature, max_tokens):
+    def _complete_anthropic(self, user, system, temperature, max_tokens, extra=None):
         kwargs: dict[str, Any] = dict(
             model=self.spec.model_id,
             max_tokens=max_tokens,
@@ -117,6 +128,9 @@ class Model:
         )
         if system:
             kwargs["system"] = system
+        for k in ("top_p", "top_k", "stop_sequences"):     # the ones this API accepts
+            if extra and k in extra:
+                kwargs[k] = extra[k]
         # Some reasoning models reject temperature != 1; tolerate that.
         try:
             resp = self._client.messages.create(temperature=temperature, **kwargs)
@@ -124,14 +138,26 @@ class Model:
             resp = self._client.messages.create(**kwargs)
         text = "".join(
             b.text for b in resp.content if getattr(b, "type", None) == "text")
-        return text.strip(), {"stop_reason": resp.stop_reason}
+        return text.strip(), {"stop_reason": resp.stop_reason,
+                              "sampling": self._sampling_note(temperature, extra),
+                              "route": self._route_note()}
 
-    def _complete_openai(self, user, system, temperature, max_tokens):
+    # Accepted directly by the OpenAI chat-completions schema; everything else a vendor
+    # recommends (top_k, min_p, repetition_penalty, ...) has to ride in extra_body.
+    _OPENAI_NATIVE = {"top_p", "presence_penalty", "frequency_penalty", "seed", "stop"}
+
+    def _complete_openai(self, user, system, temperature, max_tokens, extra=None):
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": user})
         kwargs: dict[str, Any] = dict(model=self.spec.model_id, messages=messages)
+        extra = dict(extra or {})
+        for k in list(extra):
+            if k in self._OPENAI_NATIVE:
+                kwargs[k] = extra.pop(k)
+        if extra:
+            kwargs["extra_body"] = extra
         # max_completion_tokens is the newer name; fall back to max_tokens.
         try:
             resp = self._client.chat.completions.create(
@@ -145,7 +171,26 @@ class Model:
                     temperature=temperature, max_tokens=max_tokens, **kwargs)
         choice = resp.choices[0]
         text = choice.message.content or ""
-        return text.strip(), {"finish_reason": choice.finish_reason}
+        return text.strip(), {"finish_reason": choice.finish_reason,
+                              "sampling": self._sampling_note(temperature,
+                                                              self.spec.params),
+                              "route": self._route_note()}
+
+    def _route_note(self):
+        """Which endpoint actually served this row. The same model is often reachable by
+        more than one route (a vendor API directly, or a proxy in front of it), and a run
+        file should record which one rather than leaving it to be reconstructed."""
+        return {"provider": self.spec.provider, "model_id": self.spec.model_id,
+                "base_url": self.spec.base_url}
+
+    def _sampling_note(self, temperature, extra):
+        """Stamp the effective sampling settings onto every row, so a run file says how
+        it was sampled instead of leaving it to be inferred from the code of the day."""
+        note = {"temperature": temperature}
+        for k, val in (extra or {}).items():
+            if k != "temperature":
+                note[k] = val
+        return note
 
 
 def get_model(key: str, registry: Registry | None = None) -> Model:

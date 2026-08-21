@@ -29,6 +29,7 @@ from kc.score import summarize
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "report_data.json")
+OUT_ANSWERS = os.path.join(HERE, "report_answers.json")
 CAP = 700
 LCODE = {"correct": "c", "incorrect": "w", "abstain": "a", "ungraded": "u"}
 UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
@@ -153,14 +154,22 @@ def main() -> None:
     # Only models with at least one publishable probe, in MODEL_META order.
     models = [m for m in known if summary.get(m)]
 
+    # Two payloads, because ~89% of the bytes are per-event response text that only the
+    # event explorer at the bottom of the page ever reads. Keeping it out of the core
+    # blob lets the header, leaderboard, chart and heatmap render immediately and the
+    # transcripts arrive afterwards.
     blob = {
         "months": months, "models": models, "labels": labels,
-        "events": ev_out, "summary": summary, "answers": answers,
+        "events": ev_out, "summary": summary,
     }
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(blob, f, ensure_ascii=False, separators=(",", ":"))
+    with open(OUT_ANSWERS, "w", encoding="utf-8") as f:
+        json.dump(answers, f, ensure_ascii=False, separators=(",", ":"))
     kb = os.path.getsize(OUT) / 1024
-    print(f"wrote {os.path.relpath(OUT, HERE)}  ({kb:.0f} KB)")
+    akb = os.path.getsize(OUT_ANSWERS) / 1024
+    print(f"wrote {os.path.relpath(OUT, HERE)}  ({kb:.0f} KB core)"
+          f" + {os.path.relpath(OUT_ANSWERS, HERE)}  ({akb:.0f} KB deferred)")
     print(f"  models: {models}")
     print(f"  probes per model: " +
           ", ".join(f"{m}={list(summary.get(m, {}))}" for m in models))

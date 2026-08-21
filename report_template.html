@@ -70,6 +70,7 @@
   .lb .gapneg{color:var(--bad);font-family:var(--mono);font-size:12px;}
   .lb .ctl{font-family:var(--mono);font-size:12px;color:var(--muted);}
   .lb .warn{color:var(--bad);}
+  .lb .nest{color:var(--faint);font-family:var(--mono);font-size:12px;border-bottom:1px dotted var(--hair-strong);cursor:help;}
 
   /* chart */
   .chartbox{position:relative;background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:16px 16px 8px;}
@@ -252,7 +253,9 @@ const MC = {  // per-model series colors (work on both themes)
   // few models at a time rather than trusting 18 colors at once.
   "kimi-k3":"#A764C4",
   "gemini-3.6-flash":"#0A9DC2",   // 19th; best remaining ΔE 10.0 (vs gpt-4o grey / grok-4.5 blue)
-  "grok-4.6":"#1C6B9C"};          // 20th; ΔE 9.6 (vs deepseek-v4-pro / grok-4.5)
+  "grok-4.6":"#1C6B9C",           // 20th; ΔE 9.6 (vs deepseek-v4-pro / grok-4.5)
+  "qwen3.8-27b":"#F20D78",        // 21st; ΔE 9.2 (vs gemini-3.5-flash / glm-5.2)
+  "ox-alpha":"#EB16F3"};          // 22nd; ΔE 9.1 (vs muse-spark / gpt-5.5)
 const mcol = m => MC[m] || "#8A94A6";
 
 // Provider identity: real brand logos (embedded as base64 data: URIs at build
@@ -267,6 +270,9 @@ const PROV = {
   // named Qwen-first so the initial-letter fallback reads "Qw", not "Al" (which scans as "AI")
   qwen:{name:"Qwen · Alibaba"}, thinkingmachines:{name:"Thinking Machines Lab"},
   moonshot:{name:"Moonshot AI"},
+  // Unbranded preview: OpenRouter does not disclose the vendor, so there is no logo
+  // and no advertised cutoff to compare against.
+  stealth:{name:"Stealth preview"},
 };
 const MODEL_PROV = {
   "claude-fable-5":"anthropic","claude-opus-4-8":"anthropic","claude-sonnet-5":"anthropic",
@@ -275,7 +281,7 @@ const MODEL_PROV = {
   "glm-5.2":"zhipu","deepseek-v4-pro":"deepseek",
   "deepseek-v4-flash-0731":"deepseek",
   "muse-spark-1.2":"meta","muse-glimmer-30b":"meta",
-  "qwen3.8-max":"qwen","inkling":"thinkingmachines","kimi-k3":"moonshot",
+  "qwen3.8-max":"qwen","qwen3.8-27b":"qwen","inkling":"thinkingmachines","kimi-k3":"moonshot","ox-alpha":"stealth",
 };
 function makeBadge(pk){
   const p=PROV[pk]||{name:pk}; const src=LOGOS[pk];
@@ -319,11 +325,16 @@ if(ANSWERS_URL && answersState==="idle"){
 
 /* ---------- leaderboard ---------- */
 const monthIndex = m => m ? months.indexOf(m.replace("+","")) : -1;
-function displayEff(eff){ // human label for an effective cutoff, incl. out-of-window
+function displayEff(eff, status){
+  // A null cutoff means two very different things and they must not share a label:
+  // "measured, and the horizon precedes the window" vs "the curve never collapsed, so
+  // this probe cannot place a horizon". Only the former is a result about the model.
+  if(status==="no_tail") return `<span class="nest" title="This probe's curve never sustains a drop below the ${Math.round(THR*100)}% threshold — it oscillates instead of decaying, so no month can be identified as the horizon. Under a 4-way forced choice a model can stay above chance on events it cannot actually recall.">not estimable</span>`;
   if(!eff) return "before "+fmtMonth(months[0]);
   if(eff.endsWith("+")) return "after "+fmtMonth(months[months.length-1]);
   return fmtMonth(eff);
 }
+const THR=0.5;
 function parseAdv(adv){ // "Mon YYYY" -> {y,m}, else null
   const m=/^([A-Za-z]{3})\s+(\d{4})$/.exec((adv||"").trim());
   if(!m) return null; const mi=MO.indexOf(m[1]); if(mi<0) return null;
@@ -336,7 +347,8 @@ function gapMonths(adv, eff){
 }
 function ym(s){ const [y,m]=s.split("-").map(Number); return y*12+m; }
 // Returns {html} for the "vs advertised" cell.
-function gapCell(adv, eff){
+function gapCell(adv, eff, status){
+  if(status==="no_tail") return '<span class="ctl">—</span>';
   const A=parseAdv(adv); if(!A) return '<span class="ctl">—</span>';
   if(eff===null){ // effective horizon is before the window even starts
     const N=(A.y*12+A.m)-ym(months[0]);   // advertised minus window start
@@ -354,12 +366,16 @@ function renderLeaderboard(){
     // grades" (nothing measured). Without it, an unmeasured model renders as
     // "before Jan '24" with the largest gap in the table and sorts to the top --
     // a fabricated worst-offender.
-    return {m, d, q, eff:d?d.cutoff:null, measured:!!d};
-  }).sort((a,b)=> (a.measured===b.measured)
-      ? monthIndex(b.eff)-monthIndex(a.eff)
-      : (a.measured?-1:1));   // unmeasured rows sink to the bottom
+    return {m, d, q, eff:d?d.cutoff:null, measured:!!d,
+            status:d?(d.cutoff_status||"pinned"):"pinned"};
+  }).sort((a,b)=>{
+    // Rows whose horizon cannot be placed sort with the unmeasured ones rather than
+    // with "before the window": absence of an estimate is not an early cutoff.
+    const rank=r=>(!r.measured||r.status==="no_tail")?1:0;
+    return rank(a)!==rank(b) ? rank(a)-rank(b) : monthIndex(b.eff)-monthIndex(a.eff);
+  });
   const body=document.getElementById("lb-body"); body.innerHTML="";
-  rows.forEach(({m,d,q,eff,measured})=>{
+  rows.forEach(({m,d,q,eff,measured,status})=>{
     const lab=DATA.labels[m], adv=lab.advertised;
     const ctl = (s,key)=>{ const c=(s&&s.controls)||{}; return key==="alive"
       ? `${c.alive_correct||0}/${c.alive_n||0}` : `${c.fake_confirmed||0}/${c.fake_n||0}`; };
@@ -369,7 +385,7 @@ function renderLeaderboard(){
     // Not measured on the direct probe: state that, and show the mcq figure only as
     // a clearly-labelled upper bound (mcq over-counts via guessing, so it is not
     // comparable with the direct column and never fills the gap cell).
-    const effCell = measured ? displayEff(eff)
+    const effCell = measured ? displayEff(eff, status)
       : `<span class="ctl" title="the direct probe has no publishable grades for this model">not measured</span>`
         + (q&&q.cutoff?` <span class="ctl">(mcq ≤ ${displayEff(q.cutoff)})</span>`:"");
     const tr=document.createElement("tr");
@@ -377,7 +393,7 @@ function renderLeaderboard(){
       <td><span class="mname">${badge(m)}${lab.name}</span></td>
       <td class="ctl">${adv}</td>
       <td class="eff">${effCell}</td>
-      <td>${measured?gapCell(adv, eff):'<span class="ctl">—</span>'}</td>
+      <td>${measured?gapCell(adv, eff, status):'<span class="ctl">—</span>'}</td>
       <td class="ctl ${aliveMiss?'warn':''}">${ctl(cs,"alive")}</td>
       <td class="ctl ${fakeBad?'warn':''}">${ctl(cs,"fake")}</td>`;
     body.appendChild(tr);

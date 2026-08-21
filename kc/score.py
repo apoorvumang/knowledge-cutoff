@@ -89,23 +89,50 @@ def summarize(graded_path: str, threshold: float = 0.5) -> dict:
         })
 
     # Cutoff estimates.
+    #
+    # The estimate only means something if the curve actually collapses: a knowledge
+    # horizon looks like a high plateau followed by a sustained drop. Two curves break
+    # that assumption and must not be reported as horizons:
+    #
+    #   never_below   the curve never drops under the threshold anywhere in the window,
+    #                 so the horizon is at or beyond the last month (right-censored).
+    #   no_tail       the curve dips below and recovers, ending above the threshold. It
+    #                 oscillates instead of decaying, so there is no month after which
+    #                 knowledge is reliably gone.
+    #
+    # Previously both fell through to "the last month above threshold", which for an
+    # oscillating curve is just the final month of the window -- a confident-looking
+    # figure asserting the model knows events through the end of the dataset. Under a
+    # 4-way MCQ probe (25% floor) a model that is merely good at eliminating implausible
+    # distractors can sit above 50% on events it demonstrably cannot recall, so this is
+    # the common case, not a corner case.
     above = [c["month"] for c in curve if c["known_rate"] >= threshold]
     last_above = above[-1] if above else None
 
-    crossover = None
-    for i, c in enumerate(curve):
-        if c["known_rate"] >= threshold and all(
-                d["known_rate"] < threshold for d in curve[i + 1:]):
-            crossover = c["month"]
-    # if knowledge never drops below threshold, cutoff is at/after last month
-    if crossover is None and curve and all(c["known_rate"] >= threshold for c in curve):
+    MIN_TAIL = 2          # months that must stay below threshold after the crossover
+    crossover, status = None, "pinned"
+    if not curve:
+        status = "no_data"
+    elif not above:
+        status = "before_window"          # never above threshold: horizon precedes it
+    elif all(c["known_rate"] >= threshold for c in curve):
+        status = "never_below"
         crossover = curve[-1]["month"] + "+"
+    else:
+        for i, c in enumerate(curve):
+            tail = curve[i + 1:]
+            if (c["known_rate"] >= threshold and len(tail) >= MIN_TAIL
+                    and all(d["known_rate"] < threshold for d in tail)):
+                crossover = c["month"]
+        if crossover is None:
+            status = "no_tail"            # dips and recovers: not estimable
 
     return {
         "curve": curve,
         "threshold": threshold,
         "last_above": last_above,
         "crossover": crossover,
+        "cutoff_status": status,
         "controls": controls,
         "n_events": sum(c["n"] for c in curve),
         "ungraded": ungraded,

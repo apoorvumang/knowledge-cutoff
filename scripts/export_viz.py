@@ -58,6 +58,12 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #   Inkling -> no official cutoff published. Its model card (thinkingmachines.ai/
 #     model-card/inkling/) concedes one exists without naming it: "Inkling's knowledge
 #     is limited to information available as of its training cutoff."
+#   Qwen3.8 27B -> no official cutoff published. Its HF card documents architecture and
+#     sampling settings but, per Qwen, the training corpus, token count and knowledge
+#     cutoff are all undisclosed.
+#   Ox Alpha -> no advertised cutoff and no vendor: it is an unbranded "stealth"
+#     listing on OpenRouter, so there is no model card to cite and no claim to compare
+#     the measurement against. Labelled as stealth on the page for that reason.
 #   Kimi K3 -> no official cutoff published; absent from the HF model card
 #     (huggingface.co/moonshotai/Kimi-K3) and the public technical report.
 #   Gemini 3.6 Flash -> Mar 2026, per the DeepMind model card, which hedges it:
@@ -82,8 +88,10 @@ MODEL_META = [
     ("muse-spark-1.2", "Muse Spark 1.2", "not published"),
     ("muse-glimmer-30b", "Muse Glimmer 30B", "Jan 2026"),
     ("qwen3.8-max", "Qwen3.8 Max", "not published"),
+    ("qwen3.8-27b", "Qwen3.8 27B", "not published"),
     ("inkling", "Inkling", "not published"),
     ("kimi-k3", "Kimi K3", "not published"),
+    ("ox-alpha", "Ox Alpha (stealth)", "not published"),
     ("glm-5.2", "GLM-5.2", "not published"),
     ("deepseek-v4-pro", "DeepSeek-V4-Pro", "not published"),
     ("deepseek-v4-flash-0731", "DeepSeek V4 Flash (0731)", "not published"),
@@ -135,6 +143,10 @@ def main() -> None:
                        "w": round(c["wrong_rate"], 3), "a": round(c["abstain_rate"], 3),
                        "n": c["n"]} for c in s["curve"]],
             "cutoff": s["crossover"],
+            # pinned | never_below | no_tail | before_window -- the page must not render
+            # a null cutoff as "before the window" when the real answer is "the curve
+            # never collapsed, so this probe cannot place a horizon at all".
+            "cutoff_status": s.get("cutoff_status", "pinned"),
             "controls": s["controls"],
         }
         amap: dict = {}

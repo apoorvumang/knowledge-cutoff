@@ -70,6 +70,7 @@ models:
   gemini-3.1-pro:       { provider: google, model_id: gemini-3.1-pro-preview }
   gemini-2.5-pro:       { provider: google, model_id: gemini-2.5-pro }
   # --- open-weights / Chinese frontier via OpenRouter ---
+  glm-5.3:              { provider: openrouter, model_id: "z-ai/glm-5.3" }
   glm-5.2:              { provider: openrouter, model_id: "z-ai/glm-5.2" }
   deepseek-v4-pro:      { provider: openrouter, model_id: "deepseek/deepseek-v4-pro" }
   deepseek-v4-pro-0813: { provider: openrouter, model_id: "deepseek/deepseek-v4-pro-0813" }

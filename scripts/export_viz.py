@@ -46,6 +46,11 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #     figure in secondary write-ups does not appear in the card. First xAI model here to
 #     publish a cutoff at all.
 #   GLM-5.2, DeepSeek-V4-Pro -> no official cutoff published (secondary figures unattributed)
+#   GLM-5.3 -> no official cutoff published; as of its 2026-08-18 listing Zhipu has not
+#     released the weights or model card (stated as ~2 weeks out, pending security
+#     review). Zhipu describes 5.3 as sharing GLM-5.2's base with gains from extended
+#     post-training rather than a new pretraining run, which predicts an identical
+#     knowledge horizon to 5.2 -- a claim this benchmark can check rather than assume.
 #   Muse Glimmer 30B -> Jan 2026, stated verbatim on the official HF model card
 #     ("Knowledge cutoff: January 4, 2026"), huggingface.co/meta-models/Muse-Glimmer-30B
 #   Muse Spark 1.2 -> no official cutoff published. It is Glimmer's teacher (Glimmer is
@@ -92,6 +97,7 @@ MODEL_META = [
     ("inkling", "Inkling", "not published"),
     ("kimi-k3", "Kimi K3", "not published"),
     ("ox-alpha", "Ox Alpha (stealth)", "not published"),
+    ("glm-5.3", "GLM-5.3", "not published"),
     ("glm-5.2", "GLM-5.2", "not published"),
     ("deepseek-v4-pro", "DeepSeek-V4-Pro", "not published"),
     ("deepseek-v4-flash-0731", "DeepSeek V4 Flash (0731)", "not published"),

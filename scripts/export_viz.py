@@ -69,6 +69,17 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #   Ox Alpha -> no advertised cutoff and no vendor: it is an unbranded "stealth"
 #     listing on OpenRouter, so there is no model card to cite and no claim to compare
 #     the measurement against. Labelled as stealth on the page for that reason.
+#   Gemini 3.7 Flash -> Mar 2026, with the same hedge as 3.6 verbatim ("...in others
+#     they may experience the model's knowledge is limited to January 2025"). Its card
+#     states outright that "Gemini 3.7 Flash is based on Gemini 3.6 Flash" and refers
+#     readers to 3.6's card for training data, so a shared horizon is the expectation
+#     rather than a surprise.
+#   GLM-5.3 Flash -> no cutoff published. Z.ai says it "starts from a newly trained base
+#     model" (320B MoE / 18B active, MIT), distinct from GLM-5.2/5.3's shared base.
+#   Tencent Hy4 (preview) -> no cutoff published; 770B MoE / 49B active, open weights.
+#   Mercury 2.5 (preview) -> no cutoff published. A diffusion LLM rather than an
+#     autoregressive one, which makes it a useful architectural outlier here. Earlier
+#     Mercury releases carried Jan 2025, but that does not transfer to 2.5.
 #   Kimi K3 -> no official cutoff published; absent from the HF model card
 #     (huggingface.co/moonshotai/Kimi-K3) and the public technical report.
 #   Gemini 3.6 Flash -> Mar 2026, per the DeepMind model card, which hedges it:
@@ -85,6 +96,7 @@ MODEL_META = [
     ("gpt-5.4", "GPT-5.4", "Aug 2025"),
     ("grok-4.6", "Grok 4.6", "Jan 2026"),
     ("grok-4.5", "Grok 4.5", "not published"),
+    ("gemini-3.7-flash", "Gemini 3.7 Flash", "Mar 2026"),
     ("gemini-3.6-flash", "Gemini 3.6 Flash", "Mar 2026"),
     ("gemini-3.5-flash", "Gemini 3.5 Flash", "Jan 2025"),
     ("gemini-3.1-pro", "Gemini 3.1 Pro", "Jan 2025"),
@@ -97,7 +109,10 @@ MODEL_META = [
     ("inkling", "Inkling", "not published"),
     ("kimi-k3", "Kimi K3", "not published"),
     ("ox-alpha", "Ox Alpha (stealth)", "not published"),
+    ("hy4-preview", "Tencent Hy4 (preview)", "not published"),
+    ("mercury-2.5", "Mercury 2.5 (preview)", "not published"),
     ("glm-5.3", "GLM-5.3", "not published"),
+    ("glm-5.3-flash", "GLM-5.3 Flash", "not published"),
     ("glm-5.2", "GLM-5.2", "not published"),
     ("deepseek-v4-pro", "DeepSeek-V4-Pro", "not published"),
     ("deepseek-v4-flash-0731", "DeepSeek V4 Flash (0731)", "not published"),

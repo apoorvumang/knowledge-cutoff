@@ -65,12 +65,14 @@ models:
   grok-4.5:             { provider: xai, model_id: grok-4.5 }
   grok-4:               { provider: xai, model_id: grok-4 }
   # --- Google ---
+  gemini-3.7-flash:     { provider: google, model_id: gemini-3.7-flash }
   gemini-3.6-flash:     { provider: google, model_id: gemini-3.6-flash }
   gemini-3.5-flash:     { provider: google, model_id: gemini-3.5-flash }
   gemini-3.1-pro:       { provider: google, model_id: gemini-3.1-pro-preview }
   gemini-2.5-pro:       { provider: google, model_id: gemini-2.5-pro }
   # --- open-weights / Chinese frontier via OpenRouter ---
   glm-5.3:              { provider: openrouter, model_id: "z-ai/glm-5.3" }
+  glm-5.3-flash:        { provider: openrouter, model_id: "z-ai/glm-5.3-flash" }
   glm-5.2:              { provider: openrouter, model_id: "z-ai/glm-5.2" }
   deepseek-v4-pro:      { provider: openrouter, model_id: "deepseek/deepseek-v4-pro" }
   deepseek-v4-pro-0813: { provider: openrouter, model_id: "deepseek/deepseek-v4-pro-0813" }
@@ -85,11 +87,19 @@ models:
   # --- Alibaba Qwen / Thinking Machines / Moonshot, via OpenRouter ---
   qwen3.8-max:          { provider: openrouter, model_id: "qwen/qwen3.8-max" }
   qwen3.8-27b:          { provider: openrouter, model_id: "qwen/qwen3.8-27b" }
+  qwen3.8-flash:        { provider: openrouter, model_id: "qwen/qwen3.8-flash" }
   inkling:              { provider: openrouter, model_id: "thinkingmachines/inkling" }
   kimi-k3:              { provider: openrouter, model_id: "moonshotai/kimi-k3" }
   # Unbranded "stealth" listing (OpenRouter runs these as anonymous previews, so the
   # vendor and therefore any advertised cutoff are unknown by design).
   ox-alpha:             { provider: openrouter, model_id: "stealth/ox-alpha" }
+  # --- Tencent / Inception, via OpenRouter ---
+  hy4-preview:          { provider: openrouter, model_id: "tencent/hy4-preview" }
+  mercury-2.5:          { provider: openrouter, model_id: "inception/mercury-2.5-preview" }
+  # Fable 5.1 goes via OpenRouter because the native Anthropic balance is exhausted.
+  # OpenRouter serves it from Anthropic first-party at the same 1M context, so this is
+  # the same serving stack on a different billing path; meta.route records which.
+  claude-fable-5.1:     { provider: openrouter, model_id: "anthropic/claude-fable-5.1" }
 
 # The judge, routed through OpenRouter rather than the Anthropic API directly.
 # Same underlying model as the native `claude-opus-4-8` entry above, so grades stay

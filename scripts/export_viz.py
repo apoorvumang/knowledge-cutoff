@@ -74,6 +74,9 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #     states outright that "Gemini 3.7 Flash is based on Gemini 3.6 Flash" and refers
 #     readers to 3.6's card for training data, so a shared horizon is the expectation
 #     rather than a surprise.
+#   Gemini 3.8 Flash -> Mar 2026, the same hedge again word for word. Its card says it
+#     is "based on Gemini 3.7 Flash" and "the next iteration in the Gemini 3 model
+#     family", so the documented chain is 3.8 <- 3.7 <- 3.6.
 #   GLM-5.3 Flash -> no cutoff published. Z.ai says it "starts from a newly trained base
 #     model" (320B MoE / 18B active, MIT), distinct from GLM-5.2/5.3's shared base.
 #   Tencent Hy4 (preview) -> no cutoff published; 770B MoE / 49B active, open weights.
@@ -96,6 +99,7 @@ MODEL_META = [
     ("gpt-5.4", "GPT-5.4", "Aug 2025"),
     ("grok-4.6", "Grok 4.6", "Jan 2026"),
     ("grok-4.5", "Grok 4.5", "not published"),
+    ("gemini-3.8-flash", "Gemini 3.8 Flash", "Mar 2026"),
     ("gemini-3.7-flash", "Gemini 3.7 Flash", "Mar 2026"),
     ("gemini-3.6-flash", "Gemini 3.6 Flash", "Mar 2026"),
     ("gemini-3.5-flash", "Gemini 3.5 Flash", "Jan 2025"),

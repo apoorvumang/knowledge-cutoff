@@ -65,6 +65,7 @@ models:
   grok-4.5:             { provider: xai, model_id: grok-4.5 }
   grok-4:               { provider: xai, model_id: grok-4 }
   # --- Google ---
+  gemini-4-argon:       { provider: google, model_id: gemini-4-argon }
   gemini-3.8-flash:     { provider: google, model_id: gemini-3.8-flash }
   gemini-3.7-flash:     { provider: google, model_id: gemini-3.7-flash }
   gemini-3.6-flash:     { provider: google, model_id: gemini-3.6-flash }

@@ -142,6 +142,7 @@
   .evitem .dots{display:flex;gap:3px;}
   .sdot{width:11px;height:11px;border-radius:3px;flex:none;}
   .sc{background:var(--good);} .sw{background:var(--bad);} .sa{background:var(--abst);}
+  .su{border:1px solid var(--hair-strong);}
   .badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:5px;border:1px solid var(--hair-strong);color:var(--muted);}
   .badge.low{color:var(--accent);border-color:var(--accent);}
 
@@ -159,6 +160,7 @@
   .arow .resp.empty{color:var(--faint);font-style:italic;}
   .verdict{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:6px;color:#fff;align-self:flex-start;white-space:nowrap;}
   .verdict.c{background:var(--good);} .verdict.w{background:var(--bad);} .verdict.a{background:var(--abst);}
+  .verdict.u{background:var(--panel-2);color:var(--muted);}
   .empty-state{color:var(--faint);font-size:14px;padding:40px 0;text-align:center;}
 
   footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:12px;color:var(--faint);line-height:1.7;}
@@ -262,7 +264,10 @@ const MC = {  // per-model series colors (work on both themes)
   "gemini-3.7-flash":"#1DA581","glm-5.3-flash":"#BD0F9A",
   "hy4-preview":"#BD660F","mercury-2.5":"#CB110B",
   "gemini-3.8-flash":"#555FBE",   // 28th; validated, best remaining ΔE 8.4
-  "gemini-4-argon":"#666C36"};    // 29th; max-min CIEDE2000 (17.6, vs inkling) under 3:1 contrast in both themes
+  "gemini-4-argon":"#666C36",     // 29th; max-min CIEDE2000 (17.6, vs inkling) under 3:1 contrast in both themes
+  "claude-fable-5.2":"#BC497A","gpt-6.2-sol":"#5A64D6",
+  "gemini-4-neon":"#377EAB","inkling-2-mini":"#7E8133",
+};
 const mcol = m => MC[m] || "#8A94A6";
 
 // Provider identity: real brand logos (embedded as base64 data: URIs at build
@@ -283,6 +288,8 @@ const PROV = {
   inception:{name:"Inception Labs"},
 };
 const MODEL_PROV = {
+  "claude-fable-5.2":"anthropic","gpt-6.2-sol":"openai",
+  "gemini-4-neon":"google","inkling-2-mini":"thinkingmachines",
   "claude-fable-5":"anthropic","claude-opus-4-8":"anthropic","claude-sonnet-5":"anthropic",
   "gpt-5.6-sol":"openai","gpt-5.5":"openai","gpt-5.4":"openai","gpt-4o":"openai",
   "grok-4.6":"xai","grok-4.5":"xai","gemini-4-argon":"google","gemini-3.8-flash":"google","gemini-3.7-flash":"google","gemini-3.6-flash":"google","gemini-3.5-flash":"google","gemini-3.1-pro":"google",
@@ -628,7 +635,7 @@ function renderList(){
   if(!evs.length){list.innerHTML=`<div class="empty-state">no events match</div>`;return;}
   list.innerHTML=evs.map(e=>{
     const dots=answersState==="ready" ? DATA.models.map(m=>{
-        const a=ans(m,e.id);const c=a?{c:"sc",w:"sw",a:"sa"}[a.l]:"sa";
+        const a=ans(m,e.id);const c=a?{c:"sc",w:"sw",a:"sa",u:"su"}[a.l]:"sa";
         return `<i class="sdot ${c}" title="${DATA.labels[m].name}"></i>`;}).join("")
       : `<span class="dotsload">${answersState==="error"?"unavailable":"loading…"}</span>`;
     const low=e.predictability==="low";
@@ -661,7 +668,7 @@ function renderDetail(){
   }
   const rows=DATA.models.map(m=>{
     const a=ans(m,e.id);
-    const l=a?a.l:"a"; const vlabel={c:"correct",w:"wrong",a:"abstain"}[l];
+    const l=a?a.l:"a"; const vlabel={c:"correct",w:"wrong",a:"abstain",u:"ungraded"}[l];
     let r = a&&a.r ? a.r : (a? "(no answer recorded)":"(not evaluated)");
     return `<div class="arow">
       <div class="who">${badge(m)}${DATA.labels[m].name}

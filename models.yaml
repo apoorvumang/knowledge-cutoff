@@ -74,6 +74,10 @@ models:
   grok-4:               { provider: xai, model_id: grok-4 }
   # --- Google ---
   gemini-4-argon:       { provider: google, model_id: gemini-4-argon }
+  gemini-4-carbon:
+    provider: openrouter
+    model_id: "google/gemini-4-carbon"
+    params: { provider: { only: [google-ai-studio], allow_fallbacks: false } }
   gemini-4-neon:
     provider: openrouter
     model_id: "google/gemini-4-neon"

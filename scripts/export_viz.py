@@ -100,6 +100,7 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #   GPT-6.2 Sol: developers.openai.com/api/docs/models/gpt-6.2-sol
 #   Claude Fable 5.2: platform.claude.com/docs/en/models/fable-5-2/overview
 #   Gemini 4 Neon: deepmind.google/models/model-cards/gemini-4-neon/
+#   Gemini 4 Carbon: deepmind.google/models/model-cards/gemini-4-carbon/
 #   Inkling 2 Mini: thinkingmachines.ai/model-card/inkling-2-mini/ does not give a date.
 MODEL_META = [
     ("claude-fable-5.2", "Claude Fable 5.2", "Jun 2026"),
@@ -110,6 +111,7 @@ MODEL_META = [
     ("gpt-5.4", "GPT-5.4", "Aug 2025"),
     ("grok-4.6", "Grok 4.6", "Jan 2026"),
     ("grok-4.5", "Grok 4.5", "not published"),
+    ("gemini-4-carbon", "Gemini 4 Carbon", "Mar 2026"),
     ("gemini-4-neon", "Gemini 4 Neon", "Mar 2026"),
     ("gemini-4-argon", "Gemini 4 Argon", "Mar 2026"),
     ("gemini-3.8-flash", "Gemini 3.8 Flash", "Mar 2026"),

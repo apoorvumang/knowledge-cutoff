@@ -97,13 +97,20 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #     recorded here; the caveat is the sort of claim this benchmark exists to test, so
 #     it should be read off the measured curve rather than encoded as the advertised
 #     value.
+#   GPT-6.2 Sol: developers.openai.com/api/docs/models/gpt-6.2-sol
+#   Claude Fable 5.2: platform.claude.com/docs/en/models/fable-5-2/overview
+#   Gemini 4 Neon: deepmind.google/models/model-cards/gemini-4-neon/
+#   Inkling 2 Mini: thinkingmachines.ai/model-card/inkling-2-mini/ does not give a date.
 MODEL_META = [
+    ("claude-fable-5.2", "Claude Fable 5.2", "Jun 2026"),
     ("claude-fable-5", "Claude Fable 5", "Jan 2026"),
+    ("gpt-6.2-sol", "GPT-6.2 Sol", "Jun 2026"),
     ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
     ("gpt-5.5", "GPT-5.5", "Dec 2025"),
     ("gpt-5.4", "GPT-5.4", "Aug 2025"),
     ("grok-4.6", "Grok 4.6", "Jan 2026"),
     ("grok-4.5", "Grok 4.5", "not published"),
+    ("gemini-4-neon", "Gemini 4 Neon", "Mar 2026"),
     ("gemini-4-argon", "Gemini 4 Argon", "Mar 2026"),
     ("gemini-3.8-flash", "Gemini 3.8 Flash", "Mar 2026"),
     ("gemini-3.7-flash", "Gemini 3.7 Flash", "Mar 2026"),
@@ -116,6 +123,7 @@ MODEL_META = [
     ("muse-glimmer-30b", "Muse Glimmer 30B", "Jan 2026"),
     ("qwen3.8-max", "Qwen3.8 Max", "not published"),
     ("qwen3.8-27b", "Qwen3.8 27B", "not published"),
+    ("inkling-2-mini", "Inkling 2 Mini", "not published"),
     ("inkling", "Inkling", "not published"),
     ("kimi-k3", "Kimi K3", "not published"),
     ("ox-alpha", "Ox Alpha (stealth)", "not published"),

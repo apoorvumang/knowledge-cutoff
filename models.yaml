@@ -54,8 +54,16 @@ models:
   claude-sonnet-5:      { provider: anthropic, model_id: claude-sonnet-5 }
   claude-haiku-4-5:     { provider: anthropic, model_id: claude-haiku-4-5-20251001 }
   claude-fable-5:       { provider: anthropic, model_id: claude-fable-5 }
+  claude-fable-5.2:
+    provider: openrouter
+    model_id: "anthropic/claude-fable-5.2"
+    params: { provider: { only: [anthropic], allow_fallbacks: false } }
   # --- OpenAI ---
   gpt-5.6-sol:          { provider: openai, model_id: gpt-5.6-sol }
+  gpt-6.2-sol:
+    provider: openrouter
+    model_id: "openai/gpt-6.2-sol"
+    params: { provider: { only: [openai], allow_fallbacks: false } }
   gpt-5.5:              { provider: openai, model_id: gpt-5.5 }
   gpt-5.4:              { provider: openai, model_id: gpt-5.4 }
   gpt-5:                { provider: openai, model_id: gpt-5 }
@@ -66,6 +74,10 @@ models:
   grok-4:               { provider: xai, model_id: grok-4 }
   # --- Google ---
   gemini-4-argon:       { provider: google, model_id: gemini-4-argon }
+  gemini-4-neon:
+    provider: openrouter
+    model_id: "google/gemini-4-neon"
+    params: { provider: { only: [google-ai-studio], allow_fallbacks: false } }
   gemini-3.8-flash:     { provider: google, model_id: gemini-3.8-flash }
   gemini-3.7-flash:     { provider: google, model_id: gemini-3.7-flash }
   gemini-3.6-flash:     { provider: google, model_id: gemini-3.6-flash }
@@ -91,6 +103,10 @@ models:
   qwen3.8-27b:          { provider: openrouter, model_id: "qwen/qwen3.8-27b" }
   qwen3.8-flash:        { provider: openrouter, model_id: "qwen/qwen3.8-flash" }
   inkling:              { provider: openrouter, model_id: "thinkingmachines/inkling" }
+  inkling-2-mini:
+    provider: openrouter
+    model_id: "thinkingmachines/inkling-2-mini"
+    params: { provider: { only: [primeintellect/prime], allow_fallbacks: false } }
   kimi-k3:              { provider: openrouter, model_id: "moonshotai/kimi-k3" }
   # Unbranded "stealth" listing (OpenRouter runs these as anonymous previews, so the
   # vendor and therefore any advertised cutoff are unknown by design).

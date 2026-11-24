@@ -16,22 +16,27 @@ where l = label code (c=correct, w=wrong, a=abstain) and r = response text
 (capped). Response is dropped when it equals the empty string.
 
 Run:  .venv/bin/python scripts/export_viz.py
+Append:  .venv/bin/python scripts/export_viz.py --append --graded-dir graded/<batch>
 """
 
 from __future__ import annotations
 
+import argparse
 import glob
 import json
 import os
+import tempfile
+from pathlib import Path
 
-from kc.schema import load_events
-from kc.score import summarize
+from kc.schema import Event, load_events
+from kc.score import summarize, summarize_rows
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(HERE, "report_data.json")
 OUT_ANSWERS = os.path.join(HERE, "report_answers.json")
 CAP = 700
 LCODE = {"correct": "c", "incorrect": "w", "abstain": "a", "ungraded": "u"}
+LABELS = {code: label for label, code in LCODE.items()}
 UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 
 # Display metadata: order + advertised cutoffs.
@@ -140,8 +145,38 @@ MODEL_META = [
 ]
 
 
-def main() -> None:
+def write_json(path: str, payload: dict) -> None:
+    destination = Path(path)
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=destination.parent,
+                                     delete=False) as f:
+        temporary = Path(f.name)
+        try:
+            json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
+            f.close()
+            temporary.replace(destination)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def summarize_answers(answers: dict, events: dict[str, Event]) -> dict:
+    rows = []
+    for event_id, entry in answers.items():
+        event = events[event_id]
+        rows.append({
+            "category": event.category, "month": event.month,
+            "counts_for_curve": event.counts_for_curve, "label": LABELS[entry["l"]],
+        })
+    return summarize_rows(rows)
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Build the benchmark explorer data.")
+    parser.add_argument("--graded-dir", default=os.path.join(HERE, "graded"))
+    parser.add_argument("--append", action="store_true",
+                        help="Retain existing answers and update them from the supplied grades.")
+    args = parser.parse_args(argv)
     events = load_events(os.path.join(HERE, "data", "events.jsonl"))
+    events_by_id = {e.id: e for e in events}
     ev_out = [{
         "id": e.id, "month": e.month, "category": e.category,
         "predictability": e.predictability, "region": e.region,
@@ -151,24 +186,45 @@ def main() -> None:
     } for e in events]
     months = sorted({e.month for e in events})
 
-    graded = glob.glob(os.path.join(HERE, "graded", "*.jsonl"))
-    present = set()
-    for g in graded:
-        base = os.path.basename(g)[:-6]
-        model, probe = base.rsplit("__", 1)
-        present.add(model)
+    graded = {}
+    for path in glob.glob(os.path.join(args.graded_dir, "*.jsonl")):
+        model, probe = os.path.basename(path)[:-6].rsplit("__", 1)
+        graded[(model, probe)] = path
+    prior = {}
+    if args.append:
+        with open(OUT_ANSWERS, encoding="utf-8") as f:
+            prior = json.load(f)
+        if not graded:
+            parser.error("--append requires at least one graded probe")
+    probes = set(graded) | {(m, p) for m, model in prior.items() for p in model}
+    present = {m for m, _ in probes}
 
     known = [m for m, _, _ in MODEL_META if m in present]
     labels = {m: {"name": n, "advertised": a} for m, n, a in MODEL_META}
 
     answers: dict = {}
     summary: dict = {}
-    for g in sorted(graded):
-        base = os.path.basename(g)[:-6]
-        model, probe = base.rsplit("__", 1)
+    for model, probe in sorted(probes):
         if model not in known:
             continue
-        s = summarize(g)
+        path = graded.get((model, probe))
+        previous = prior.get(model, {}).get(probe, {})
+        amap = dict(previous)
+        if path:
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    row = json.loads(line)
+                    entry = {"l": LCODE[row.get("label", "abstain")]}
+                    resp = (row.get("response") or "").strip()
+                    if resp:
+                        entry["r"] = resp[:CAP] + ("…" if len(resp) > CAP else "")
+                    event_id = row["event_id"]
+                    if entry["l"] == "u" and event_id in amap and amap[event_id]["l"] != "u":
+                        continue
+                    amap[event_id] = entry
+        s = summarize_answers(amap, events_by_id) if args.append else summarize(path)
         # Refuse to publish a (model, probe) whose grades are largely missing --
         # e.g. a judge that ran out of API credit turns every row ungraded, which
         # would render as a confident "this model knows nothing" curve. Re-grade
@@ -178,7 +234,10 @@ def main() -> None:
         if total and ungraded / total > UNGRADED_MAX:
             print(f"  SKIP {model}/{probe}: {ungraded}/{total} rows ungraded "
                   f"(>{UNGRADED_MAX:.0%}) -- re-grade before publishing")
-            continue
+            if not previous:
+                continue
+            amap = previous
+            s = summarize_answers(previous, events_by_id)
         summary.setdefault(model, {})[probe] = {
             "curve": [{"m": c["month"], "k": round(c["known_rate"], 3),
                        "w": round(c["wrong_rate"], 3), "a": round(c["abstain_rate"], 3),
@@ -190,18 +249,6 @@ def main() -> None:
             "cutoff_status": s.get("cutoff_status", "pinned"),
             "controls": s["controls"],
         }
-        amap: dict = {}
-        with open(g, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                row = json.loads(line)
-                entry = {"l": LCODE.get(row.get("label", "abstain"), "a")}
-                resp = (row.get("response") or "").strip()
-                if resp:
-                    entry["r"] = resp[:CAP] + ("…" if len(resp) > CAP else "")
-                amap[row["event_id"]] = entry
         answers.setdefault(model, {})[probe] = amap
 
     # Only models with at least one publishable probe, in MODEL_META order.
@@ -215,10 +262,8 @@ def main() -> None:
         "months": months, "models": models, "labels": labels,
         "events": ev_out, "summary": summary,
     }
-    with open(OUT, "w", encoding="utf-8") as f:
-        json.dump(blob, f, ensure_ascii=False, separators=(",", ":"))
-    with open(OUT_ANSWERS, "w", encoding="utf-8") as f:
-        json.dump(answers, f, ensure_ascii=False, separators=(",", ":"))
+    write_json(OUT, blob)
+    write_json(OUT_ANSWERS, answers)
     kb = os.path.getsize(OUT) / 1024
     akb = os.path.getsize(OUT_ANSWERS) / 1024
     print(f"wrote {os.path.relpath(OUT, HERE)}  ({kb:.0f} KB core)"

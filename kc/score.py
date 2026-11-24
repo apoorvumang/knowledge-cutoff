@@ -42,8 +42,10 @@ def _bar(rate: float, width: int = 20) -> str:
 
 
 def summarize(graded_path: str, threshold: float = 0.5) -> dict:
-    rows = _load(graded_path)
+    return summarize_rows(_load(graded_path), threshold)
 
+
+def summarize_rows(rows: list[dict], threshold: float = 0.5) -> dict:
     # Per-month tallies over curve-eligible events.
     per_month: dict[str, dict[str, int]] = defaultdict(
         lambda: {"correct": 0, "incorrect": 0, "abstain": 0, "n": 0})

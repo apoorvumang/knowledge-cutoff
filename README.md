@@ -92,6 +92,10 @@ over-counts (guessing), so they bracket the truth.
 
 `data/events.jsonl`, one event per line. Schema and category semantics are
 documented in `kc/schema.py`. To add events, append lines and run `kc validate`.
+For a new batch, use `kc --events <batch.jsonl>` to run and grade only those
+rows. Merge the grades into the existing explorer results with
+`python scripts/export_viz.py --append --graded-dir <batch-grades>`, then run
+`python scripts/build_page.py`.
 
 | field | meaning |
 |---|---|

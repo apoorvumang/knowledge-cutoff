@@ -169,7 +169,7 @@
 <div class="wrap">
   <p class="eyebrow">Knowledge-Cutoff Benchmark · Explorer</p>
   <h1>How up-to-date is each AI model?</h1>
-  <p class="lede"><b>__NMODELS__ models</b> were each probed on <b>330 surprising, unforecastable events</b> spanning 30 months (Jan 2024 – Jun 2026). Below: a month-by-month heatmap with each model's <b>claimed</b> cutoff ringed, a leaderboard of where knowledge actually collapses (its <b>effective cutoff</b>), and — for every single event — <b>the exact answer each model gave</b>. Pick an event and read them yourself.</p>
+  <p class="lede">The benchmark covers <b>__NEVENTS__ questions</b> across __NMONTHS__ months (__MONTH_RANGE__), with results for <b>__NMODELS__ models</b>. The heatmap shows monthly accuracy and outlines each model's claimed cutoff. Select a cell to explore the answers.</p>
 
   <div class="toplinks">
     <a href="https://github.com/apoorvumang/knowledge-cutoff"><span class="ic">↗</span>Code on GitHub</a>
@@ -183,7 +183,7 @@
     <div class="heat">
       <div id="heat-controls" class="hctl"></div>
       <div id="heat-slot"></div>
-      <div class="hcap">doesn't know <span class="scale"></span> knows &nbsp;·&nbsp; shade = % correct that month &nbsp;·&nbsp; <span class="claimed-key"></span> claimed cutoff (where the model says its knowledge ends)</div>
+      <div class="hcap">doesn't know <span class="scale"></span> knows &nbsp;·&nbsp; shade = % correct that month &nbsp;·&nbsp; <span class="claimed-key"></span> claimed cutoff &nbsp;·&nbsp; blank = no results</div>
     </div>
   </div>
 
@@ -222,9 +222,10 @@
 
   <footer>
     <a href="https://github.com/apoorvumang/knowledge-cutoff">code on GitHub</a> · <a href="https://huggingface.co/datasets/apoorvumang/knowledge-cutoff-benchmark">dataset on HuggingFace</a><br>
-    direct = open question graded correct / wrong / abstain by an LLM judge holding the ground truth · mcq = 4-way forced choice (chance ≈ 25%)<br>
+    direct = open question graded correct / wrong / abstain by an LLM judge holding the ground truth · mcq = 4-way forced choice (uniform guessing = 25%)<br>
     effective cutoff = last month above 50% correct that stays gone afterward · controls: living people (should be "alive") + fabricated events (should be denied)<br>
-    330 events · __NMODELS__ models · Jan 2024 – Jun 2026 · surprising / unforecastable only · balanced US / international
+    For July–October 2026, reasoning was disabled for both Hy4 Preview probes and for Inkling 2 Mini multiple choice.<br>
+    __NEVENTS__ questions · __NMODELS__ models · __MONTH_RANGE__
   </footer>
 </div>
 
@@ -348,7 +349,7 @@ function displayEff(eff, status){
   // this probe cannot place a horizon". Only the former is a result about the model.
   if(status==="no_tail") return `<span class="nest" title="This probe's curve never sustains a drop below the ${Math.round(THR*100)}% threshold — it oscillates instead of decaying, so no month can be identified as the horizon. Under a 4-way forced choice a model can stay above chance on events it cannot actually recall.">not estimable</span>`;
   if(!eff) return "before "+fmtMonth(months[0]);
-  if(eff.endsWith("+")) return "after "+fmtMonth(months[months.length-1]);
+  if(eff.endsWith("+")) return fmtMonth(eff.slice(0,-1))+" or later";
   return fmtMonth(eff);
 }
 const THR=0.5;
@@ -365,7 +366,7 @@ function gapMonths(adv, eff){
 function ym(s){ const [y,m]=s.split("-").map(Number); return y*12+m; }
 // Returns {html} for the "vs advertised" cell.
 function gapCell(adv, eff, status){
-  if(status==="no_tail") return '<span class="ctl">—</span>';
+  if(status==="no_tail" || status==="never_below") return '<span class="ctl">—</span>';
   const A=parseAdv(adv); if(!A) return '<span class="ctl">—</span>';
   if(eff===null){ // effective horizon is before the window even starts
     const N=(A.y*12+A.m)-ym(months[0]);   // advertised minus window start
@@ -435,11 +436,13 @@ function renderChart(){
   DATA.models.forEach(m=>{
     if(state.hidden.has(m)) return;
     const s=DATA.summary[m]&&DATA.summary[m][state.probe]; if(!s) return;
-    const arr=s.curve.map(c=>c.k);
-    const d=arr.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+    const measured=new Map(s.curve.map(c=>[c.m,c.k]));
+    const d=months.map((mo,i)=>measured.has(mo)
+      ? (measured.has(months[i-1])?"L":"M")+x(i).toFixed(1)+" "+y(measured.get(mo)).toFixed(1)
+      : "").join(" ");
     const p=add("path",{d,fill:"none",stroke:mcol(m),"stroke-width":2.4,"stroke-linejoin":"round","stroke-linecap":"round","opacity":.92});
     const ci=s.cutoff?monthIndex(s.cutoff):-1;
-    if(ci>=0) add("circle",{cx:x(ci),cy:y(arr[ci]),r:3.2,fill:mcol(m),stroke:"var(--panel)","stroke-width":1.5});
+    if(ci>=0 && measured.has(months[ci])) add("circle",{cx:x(ci),cy:y(measured.get(months[ci])),r:3.2,fill:mcol(m),stroke:"var(--panel)","stroke-width":1.5});
     if(!reduce){const L=p.getTotalLength();p.style.strokeDasharray=L;p.style.strokeDashoffset=L;
       p.animate([{strokeDashoffset:L},{strokeDashoffset:0}],{duration:900,easing:"ease-out",fill:"forwards"});}
   });
@@ -451,8 +454,8 @@ function renderChart(){
     let i=Math.round((px-padL)/((W-padL-padR)/(N-1))); i=Math.max(0,Math.min(N-1,i));
     guide.setAttribute("x1",x(i));guide.setAttribute("x2",x(i));guide.setAttribute("opacity",.4);
     const rows=DATA.models.filter(m=>!state.hidden.has(m)).map(m=>{
-      const s=DATA.summary[m]&&DATA.summary[m][state.probe]; if(!s)return"";
-      return `<div class="row"><span style="color:${mcol(m)}">${DATA.labels[m].name}</span><b>${Math.round(s.curve[i].k*100)}%</b></div>`;}).join("");
+      const cell=DATA.summary[m]?.[state.probe]?.curve.find(c=>c.m===months[i]); if(!cell)return"";
+      return `<div class="row"><span style="color:${mcol(m)}">${DATA.labels[m].name}</span><b>${Math.round(cell.k*100)}%</b></div>`;}).join("");
     tip.innerHTML=`<div class="th">${fmtMonth(months[i])}</div>${rows}`;
     tip.style.opacity=1;
     const box=svg.getBoundingClientRect();
@@ -515,18 +518,20 @@ function renderHeatmap(){
   let head="<tr><th></th>"+months.map(m=>`<th class="col">${fmtMonth(m)}</th>`).join("")+"</tr>";
   let body=visible.map(m=>{
     const s=DATA.summary[m]&&DATA.summary[m][state.probe];
+    const measured=new Map((s?.curve||[]).map(c=>[c.m,c]));
     const ci=advIndex(m);
     const cells=months.map((mo,i)=>{
       const claimed=(i===ci);
       // No data for this probe (e.g. ungraded, so withheld) must NOT paint as 0% --
       // the red end of the scale means "measured, knew nothing", which is a claim
       // we haven't earned. Render it as an explicit blank instead.
-      if(!s){
+      const cell=measured.get(mo);
+      if(!cell){
         const t=`${DATA.labels[m].name} · ${fmtMonth(mo)} · no data for the ${state.probe} probe`;
         return `<td class="nodata ${claimed?'claimed':''}" title="${t}"
           data-m="${m}" data-mo="${mo}"></td>`;
       }
-      const k=s.curve[i].k, n=s.curve[i].n;
+      const {k,n}=cell;
       const t=`${DATA.labels[m].name} · ${fmtMonth(mo)} · ${Math.round(k*100)}% (n=${n})`
         + (claimed?` · CLAIMED cutoff (${DATA.labels[m].advertised})`:"");
       return `<td class="${claimed?'claimed':''}" title="${t}"
@@ -637,7 +642,7 @@ function renderList(){
   if(!evs.length){list.innerHTML=`<div class="empty-state">no events match</div>`;return;}
   list.innerHTML=evs.map(e=>{
     const dots=answersState==="ready" ? DATA.models.map(m=>{
-        const a=ans(m,e.id);const c=a?{c:"sc",w:"sw",a:"sa",u:"su"}[a.l]:"sa";
+        const a=ans(m,e.id);const c=a?{c:"sc",w:"sw",a:"sa",u:"su"}[a.l]:"su";
         return `<i class="sdot ${c}" title="${DATA.labels[m].name}"></i>`;}).join("")
       : `<span class="dotsload">${answersState==="error"?"unavailable":"loading…"}</span>`;
     const low=e.predictability==="low";
@@ -670,8 +675,8 @@ function renderDetail(){
   }
   const rows=DATA.models.map(m=>{
     const a=ans(m,e.id);
-    const l=a?a.l:"a"; const vlabel={c:"correct",w:"wrong",a:"abstain",u:"ungraded"}[l];
-    let r = a&&a.r ? a.r : (a? "(no answer recorded)":"(not evaluated)");
+    const l=a?a.l:"u"; const vlabel=a?{c:"correct",w:"wrong",a:"abstain",u:"ungraded"}[l]:"not evaluated";
+    const r = a ? (a.r || "(no answer recorded)") : "";
     return `<div class="arow">
       <div class="who">${badge(m)}${DATA.labels[m].name}
         <span class="verdict ${l}">${vlabel}</span></div>

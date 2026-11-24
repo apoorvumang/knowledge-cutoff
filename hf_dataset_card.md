@@ -26,10 +26,10 @@ A benchmark for estimating a language model's **effective knowledge cutoff** —
 what it *actually* knows about the world — which is usually **earlier than the
 cutoff date the model advertises**.
 
-Each model is probed on curated, **surprising / unforecastable** real-world
-events (deaths, changes of office) spread month-by-month across Jan 2024 –
-Jun 2026. The month where per-month accuracy collapses is the model's effective
-knowledge horizon.
+The benchmark probes models on curated real-world events (deaths and changes of
+office) from January 2024 through October 2026. The effective knowledge horizon
+is estimated from monthly accuracy on difficult-to-predict events. Coverage
+varies by model.
 
 - Code, methodology, and an interactive explorer: https://github.com/apoorvumang/knowledge-cutoff
 - Live visualization: https://apoorvumang.github.io/knowledge-cutoff/

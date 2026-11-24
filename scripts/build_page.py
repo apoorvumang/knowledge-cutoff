@@ -9,6 +9,7 @@ import base64
 import glob
 import json
 import os
+from datetime import date
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 tpl = open(os.path.join(HERE, "report_template.html"), encoding="utf-8").read()
@@ -28,15 +29,20 @@ for path in sorted(glob.glob(os.path.join(HERE, "assets", "logos", "*.svg")) +
 answers = open(os.path.join(HERE, "report_answers.json"), encoding="utf-8").read()
 answers_esc = answers.replace("<", "\\u003c")
 
-# Model count is derived, not hardcoded, so prose can't drift as models are added.
-nmodels = len(json.loads(open(os.path.join(HERE, "report_data.json"), encoding="utf-8").read())["models"])
+report = json.loads(data)
+months = report["months"]
+first, last = (date.fromisoformat(month + "-01").strftime("%b %Y")
+               for month in (months[0], months[-1]))
 
 def render(answers_literal: str, answers_url: str) -> str:
     o = tpl.replace("__DATA__", data)
     o = o.replace("__LOGOS__", json.dumps(logos))
     o = o.replace("__ANSWERS__", answers_literal)
     o = o.replace("__ANSWERS_URL__", answers_url)
-    o = o.replace("__NMODELS__", str(nmodels))
+    o = o.replace("__NMODELS__", str(len(report["models"])))
+    o = o.replace("__NEVENTS__", str(len(report["events"])))
+    o = o.replace("__NMONTHS__", str(len(months)))
+    o = o.replace("__MONTH_RANGE__", f"{first} – {last}")
     assert "__" not in o.replace("__", "", 0) or True
     return o
 

@@ -103,6 +103,7 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 #     it should be read off the measured curve rather than encoded as the advertised
 #     value.
 #   GPT-6.2 Sol: developers.openai.com/api/docs/models/gpt-6.2-sol
+#   GPT-6.2 Astra: developers.openai.com/api/docs/models/gpt-6.2-astra
 #   Claude Fable 5.2: platform.claude.com/docs/en/models/fable-5-2/overview
 #   Gemini 4 Neon: deepmind.google/models/model-cards/gemini-4-neon/
 #   Gemini 4 Carbon: deepmind.google/models/model-cards/gemini-4-carbon/
@@ -110,6 +111,7 @@ UNGRADED_MAX = 0.05   # skip a probe if >5% of its rows never got a grade
 MODEL_META = [
     ("claude-fable-5.2", "Claude Fable 5.2", "Jun 2026"),
     ("claude-fable-5", "Claude Fable 5", "Jan 2026"),
+    ("gpt-6.2-astra", "GPT-6.2 Astra", "May 2026"),
     ("gpt-6.2-sol", "GPT-6.2 Sol", "Jun 2026"),
     ("gpt-5.6-sol", "GPT-5.6 (sol)", "Feb 2026"),
     ("gpt-5.5", "GPT-5.5", "Dec 2025"),

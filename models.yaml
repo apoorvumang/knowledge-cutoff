@@ -64,6 +64,10 @@ models:
     provider: openrouter
     model_id: "openai/gpt-6.2-sol"
     params: { provider: { only: [openai], allow_fallbacks: false } }
+  gpt-6.2-astra:
+    provider: openrouter
+    model_id: "openai/gpt-6.2-astra"
+    params: { provider: { only: [openai], allow_fallbacks: false } }
   gpt-5.5:              { provider: openai, model_id: gpt-5.5 }
   gpt-5.4:              { provider: openai, model_id: gpt-5.4 }
   gpt-5:                { provider: openai, model_id: gpt-5 }
